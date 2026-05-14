@@ -59,6 +59,17 @@
   margin-bottom: 18px;
 }
 
+.stage-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #d8dee6;
+  border-radius: 8px;
+  background: #eef2f6;
+  margin-bottom: 12px;
+}
+
 button {
   font: inherit;
 }
@@ -72,10 +83,20 @@ button {
   cursor: pointer;
 }
 
-.segmented button.active {
+.segmented button.active,
+.stage-tabs button.active {
   color: #0f172a;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.stage-tabs button {
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  color: #4b5563;
+  background: transparent;
+  cursor: pointer;
 }
 
 .panel {
@@ -595,6 +616,20 @@ button {
 .charge-negative {
   fill: #14b8a6;
   filter: drop-shadow(0 0 20px rgba(20, 184, 166, 0.85));
+}
+
+.test-charge-path {
+  fill: none;
+  stroke: rgba(248, 250, 252, 0.42);
+  stroke-width: 2;
+  stroke-dasharray: 8 8;
+}
+
+.test-charge {
+  fill: #f8fafc;
+  stroke: #38bdf8;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.8));
 }
 
 .field-region {

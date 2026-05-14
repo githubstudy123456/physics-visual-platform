@@ -41,9 +41,15 @@ const defaultParams: SimParams = {
 }
 
 function App() {
+  const [selectedStage, setSelectedStage] = useState<'初中' | '高中'>(books[0].stage)
   const [selectedBookId, setSelectedBookId] = useState(books[0].id)
   const [selectedChapterId, setSelectedChapterId] = useState(chapters[0].id)
   const [selectedTemplateId, setSelectedTemplateId] = useState(chapters[0].modelIds[0])
+
+  const visibleBooks = useMemo(
+    () => books.filter((book) => book.stage === selectedStage),
+    [selectedStage],
+  )
 
   const visibleChapters = useMemo(
     () => chapters.filter((chapter) => chapter.bookId === selectedBookId),
@@ -60,6 +66,16 @@ function App() {
   function selectBook(bookId: string) {
     const firstChapter = chapters.find((chapter) => chapter.bookId === bookId) ?? chapters[0]
     setSelectedBookId(bookId)
+    setSelectedStage(books.find((book) => book.id === bookId)?.stage ?? selectedStage)
+    setSelectedChapterId(firstChapter.id)
+    setSelectedTemplateId(getFirstModelId(firstChapter))
+  }
+
+  function selectStage(stage: '初中' | '高中') {
+    const firstBook = books.find((book) => book.stage === stage) ?? books[0]
+    const firstChapter = chapters.find((chapter) => chapter.bookId === firstBook.id) ?? chapters[0]
+    setSelectedStage(stage)
+    setSelectedBookId(firstBook.id)
     setSelectedChapterId(firstChapter.id)
     setSelectedTemplateId(getFirstModelId(firstChapter))
   }
@@ -83,10 +99,22 @@ function App() {
         <section className="panel book-panel">
           <div className="section-title">
             <span>教材</span>
-            <small>{books.length} 本</small>
+            <small>{visibleBooks.length} 本</small>
+          </div>
+          <div className="stage-tabs">
+            {(['初中', '高中'] as const).map((stage) => (
+              <button
+                key={stage}
+                type="button"
+                className={stage === selectedStage ? 'active' : ''}
+                onClick={() => selectStage(stage)}
+              >
+                {stage}
+              </button>
+            ))}
           </div>
           <div className="book-list">
-            {books.map((book) => (
+            {visibleBooks.map((book) => (
               <button
                 key={book.id}
                 type="button"
@@ -383,6 +411,11 @@ function getParamControls(template: ModelTemplate): ParamControl[] {
       { key: 'force', label: '速度 v', min: 10, max: 120, step: 1, unit: 'cm/s' },
       { key: 'height', label: '路程 s', min: 20, max: 90, step: 1, unit: 'cm' },
     ],
+    'kinematics-graph': [
+      { key: 'height', label: '初速度 v0', min: 0, max: 90, step: 1, unit: 'm/s' },
+      { key: 'force', label: '加速度 a', min: -30, max: 80, step: 1, unit: 'm/s²' },
+      { key: 'time', label: '时间 t', min: 0, max: 90, step: 1, unit: 's' },
+    ],
     'sound-wave': [
       { key: 'force', label: '频率 f', min: 10, max: 120, step: 1, unit: 'Hz' },
       { key: 'height', label: '振幅 A', min: 10, max: 90, step: 1, unit: '%' },
@@ -488,6 +521,11 @@ function getObservations(template: ModelTemplate, params: SimParams) {
       { label: '平均速度', value: `${speed} cm/s` },
       { label: '读数提醒', value: '估读到分度值下一位' },
     ],
+    'kinematics-graph': [
+      { label: '速度关系', value: 'v=v0+at' },
+      { label: '图像斜率', value: `a=${params.force} m/s²` },
+      { label: '位移含义', value: 'v-t 图像面积' },
+    ],
     'sound-wave': [
       { label: '音调', value: params.force > 70 ? '较高' : '较低' },
       { label: '响度', value: params.height > 55 ? '较大' : '较小' },
@@ -568,6 +606,7 @@ function formatSeconds(value: number) {
 
 function PhysicsCanvas({ template, params }: { template: ModelTemplate; params: SimParams }) {
   if (template.id === 'measurement-scale') return <MeasurementScene params={params} />
+  if (template.id === 'kinematics-graph') return <KinematicsScene params={params} />
   if (template.id === 'sound-wave') return <SoundWaveScene params={params} />
   if (template.id === 'state-change') return <StateChangeScene params={params} />
   if (template.id === 'density-particle') return <DensityScene params={params} />
@@ -612,6 +651,46 @@ function MeasurementScene({ params }: { params: SimParams }) {
         <line x1="510" y1="334" x2="690" y2="334" className="axis" />
         <line x1="530" y1="354" x2="530" y2="180" className="axis" />
         <polyline points={`530,334 618,${graphY} 690,${Math.max(92, graphY - 36)}`} className="graph-line" />
+      </svg>
+    </div>
+  )
+}
+
+function KinematicsScene({ params }: { params: SimParams }) {
+  const t = params.time / 12
+  const v0 = params.height / 5
+  const a = params.force / 18
+  const velocity = Math.max(0, v0 + a * t)
+  const displacement = Math.max(0, v0 * t + 0.5 * a * t * t)
+  const cartX = Math.min(646, 92 + displacement * 10)
+  const graphPoints = Array.from({ length: 12 }, (_, i) => {
+    const gt = i / 1.4
+    const gv = Math.max(0, v0 + a * gt)
+    return `${110 + gt * 38},${332 - gv * 9}`
+  }).join(' ')
+
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="匀变速直线运动模型">
+        <rect x="0" y="0" width="760" height="430" className="light-bg" />
+        <line x1="76" y1="154" x2="684" y2="154" className="axis" />
+        {Array.from({ length: 11 }, (_, i) => (
+          <line key={i} x1={92 + i * 56} y1="136" x2={92 + i * 56} y2="172" className="normal" />
+        ))}
+        <rect x={cartX} y="106" width="84" height="44" rx="8" className="cart" />
+        <circle cx={cartX + 18} cy="154" r="10" className="meter" />
+        <circle cx={cartX + 66} cy="154" r="10" className="meter" />
+        <Arrow x1={cartX + 42} y1={98} x2={cartX + 42 + velocity * 4} y2={98} color="#1f6feb" label="v" />
+        <Arrow x1={cartX + 42} y1={82} x2={cartX + 42 + a * 24} y2={82} color="#f97316" label="a" />
+
+        <line x1="88" y1="340" x2="430" y2="340" className="axis" />
+        <line x1="110" y1="352" x2="110" y2="210" className="axis" />
+        <polyline points={graphPoints} className="graph-line" />
+        <polygon points={`110,340 ${graphPoints} 430,340`} className="area" />
+        <text x="132" y="216" className="caption-label">v-t 图像：斜率是加速度，面积是位移</text>
+        <rect x="500" y="240" width="180" height="92" rx="8" className="energy-box" />
+        <text x="522" y="278" className="label small">v={velocity.toFixed(1)}m/s</text>
+        <text x="522" y="314" className="label small">x={displacement.toFixed(1)}m</text>
       </svg>
     </div>
   )
@@ -714,6 +793,8 @@ function CircularGravityScene({ params }: { params: SimParams }) {
 
 function ElectrostaticScene({ params }: { params: SimParams }) {
   const density = Math.round(16 + params.voltage * 4)
+  const testX = 150 + params.time * 5
+  const testY = 300 - Math.sin(params.time / 18) * params.height
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="静电场模型">
@@ -738,6 +819,12 @@ function ElectrostaticScene({ params }: { params: SimParams }) {
         <circle cx="468" cy="216" r="30" className="charge-negative" />
         <text x="282" y="224" className="label small light">+</text>
         <text x="460" y="224" className="label small light">-</text>
+        <path
+          d={`M150 300 C250 ${240 - params.height} 374 ${366 - params.height} 610 160`}
+          className="test-charge-path"
+        />
+        <circle cx={Math.min(610, testX)} cy={testY} r="10" className="test-charge" />
+        <Arrow x1={Math.min(610, testX)} y1={testY} x2={Math.min(610, testX) + 60} y2={testY - 20} color="#f8fafc" label="F" />
         <text x="84" y="70" className="caption-label light">电场线从正电荷出发，到负电荷终止</text>
       </svg>
     </div>
