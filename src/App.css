@@ -84,7 +84,8 @@ button {
   background: #ffffff;
 }
 
-.topic-panel {
+.book-panel,
+.chapter-panel {
   padding: 14px;
 }
 
@@ -106,12 +107,14 @@ button {
   font-size: 12px;
 }
 
-.topic-list {
+.book-list,
+.chapter-list {
   display: grid;
   gap: 8px;
 }
 
-.topic-item,
+.book-list button,
+.chapter-list button,
 .template-card {
   width: 100%;
   text-align: left;
@@ -121,27 +124,36 @@ button {
   cursor: pointer;
 }
 
-.topic-item {
+.book-list button,
+.chapter-list button {
   display: grid;
   gap: 4px;
   padding: 12px;
 }
 
-.topic-item strong,
+.book-list button strong,
+.chapter-list button strong,
 .template-card strong {
   color: #101828;
 }
 
-.topic-item span,
+.book-list button span,
+.chapter-list button span,
+.chapter-list button small,
 .template-card small {
   color: #667085;
   font-size: 12px;
 }
 
-.topic-item.selected,
+.book-list button.selected,
+.chapter-list button.selected,
 .template-card.selected {
   border-color: #1f6feb;
   background: #f2f7ff;
+}
+
+.chapter-panel {
+  margin-top: 14px;
 }
 
 .main-workspace {
@@ -190,12 +202,12 @@ button {
   gap: 16px;
 }
 
-.knowledge-card,
+.chapter-detail,
 .template-library,
 .canvas-panel,
 .workbench,
 .storyboard-panel,
-.render-card {
+.source-panel {
   padding: 18px;
 }
 
@@ -214,34 +226,46 @@ button {
   font-size: 13px;
 }
 
-.linked-models {
-  margin-top: 20px;
-}
-
-.linked-models p {
-  margin: 0 0 8px;
-  color: #667085;
-  font-size: 13px;
-}
-
-.linked-models div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.linked-models button {
-  padding: 7px 10px;
-  border: 1px solid #bdd4ff;
-  border-radius: 6px;
-  color: #0b4db3;
-  background: #f2f7ff;
-}
-
 .template-library,
 .canvas-panel,
 .storyboard-panel {
   grid-row: span 2;
+}
+
+.chapter-detail {
+  grid-row: span 2;
+}
+
+.lesson-list {
+  display: grid;
+  gap: 10px;
+}
+
+.lesson-card {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e1e7ef;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.lesson-index {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #1f6feb;
+  font-weight: 800;
+}
+
+.lesson-card h3 {
+  margin: 0 0 10px;
+  color: #101828;
+  font-size: 16px;
 }
 
 .template-grid {
@@ -250,10 +274,23 @@ button {
   gap: 10px;
 }
 
+.template-grid.compact {
+  margin-bottom: 18px;
+}
+
+.all-model-title {
+  padding-top: 14px;
+  border-top: 1px solid #e1e7ef;
+}
+
 .template-card {
   min-height: 158px;
   padding: 14px;
   position: relative;
+}
+
+.template-grid.compact .template-card {
+  min-height: 132px;
 }
 
 .template-card p {
@@ -436,6 +473,57 @@ button {
   stroke-dasharray: 10 8;
 }
 
+.normal {
+  stroke: #98a2b3;
+  stroke-width: 2;
+  stroke-dasharray: 6 8;
+}
+
+.lens-outline {
+  fill: none;
+  stroke: #1f6feb;
+  stroke-width: 4;
+}
+
+.ray {
+  stroke: #ef4444;
+  stroke-width: 4;
+}
+
+.ray.alt {
+  stroke: #f97316;
+}
+
+.pressure-line {
+  stroke: #1f6feb;
+  stroke-width: 4;
+  stroke-dasharray: 8 6;
+}
+
+.energy-box {
+  fill: #e7f0ff;
+  stroke: #1f6feb;
+  stroke-width: 3;
+}
+
+.energy-box.hot {
+  fill: #fff1e6;
+  stroke: #f97316;
+}
+
+.energy-box.motion {
+  fill: #ecfdf3;
+  stroke: #16a34a;
+}
+
+.efficiency-bg {
+  fill: #e5e7eb;
+}
+
+.efficiency-fill {
+  fill: #1f6feb;
+}
+
 .workbench textarea {
   width: 100%;
   min-height: 156px;
@@ -491,17 +579,27 @@ button {
   line-height: 1.5;
 }
 
-.render-flow {
+.source-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.render-flow div {
+.source-list a {
+  display: grid;
+  gap: 6px;
   padding: 12px;
   border: 1px solid #e1e7ef;
   border-radius: 8px;
   background: #fbfdff;
+  color: inherit;
+  text-decoration: none;
+}
+
+.source-list span {
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 @media (max-width: 1180px) {
@@ -521,7 +619,8 @@ button {
 
   .template-library,
   .canvas-panel,
-  .storyboard-panel {
+  .storyboard-panel,
+  .chapter-detail {
     grid-row: auto;
   }
 }
@@ -538,7 +637,7 @@ button {
   }
 
   .template-grid,
-  .render-flow {
+  .source-list {
     grid-template-columns: 1fr;
   }
 }
