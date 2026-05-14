@@ -3,21 +3,47 @@ import {
   books,
   chapters,
   modelTemplates,
-  openAssetSources,
   type CanvasKind,
   type Chapter,
   type ModelTemplate,
 } from './data/curriculum'
 import './App.css'
 
-const sampleProblem =
-  '如图，斜面倾角为 θ，木板 C 放在斜面上，物块 A、B 放在木板上。释放后系统沿斜面运动，求物块与木板之间的受力关系，并判断运动过程。'
+type SimParams = {
+  time: number
+  angle: number
+  force: number
+  voltage: number
+  resistance: number
+  temperature: number
+  density: number
+  height: number
+}
+
+type ParamControl = {
+  key: keyof SimParams
+  label: string
+  min: number
+  max: number
+  step: number
+  unit: string
+}
+
+const defaultParams: SimParams = {
+  time: 32,
+  angle: 30,
+  force: 60,
+  voltage: 6,
+  resistance: 10,
+  temperature: 35,
+  density: 55,
+  height: 50,
+}
 
 function App() {
   const [selectedBookId, setSelectedBookId] = useState(books[0].id)
   const [selectedChapterId, setSelectedChapterId] = useState(chapters[0].id)
   const [selectedTemplateId, setSelectedTemplateId] = useState(chapters[0].modelIds[0])
-  const [problem, setProblem] = useState(sampleProblem)
 
   const visibleChapters = useMemo(
     () => chapters.filter((chapter) => chapter.bookId === selectedBookId),
@@ -33,7 +59,6 @@ function App() {
     modelTemplates.find((template) => template.id === selectedTemplateId) ??
     recommendedModels[0] ??
     modelTemplates[0]
-  const storyboard = buildStoryboard(problem, selectedChapter, selectedTemplate)
 
   function selectBook(bookId: string) {
     const firstChapter = chapters.find((chapter) => chapter.bookId === bookId) ?? chapters[0]
@@ -110,10 +135,9 @@ function App() {
             <p>{selectedBook.source}</p>
           </div>
           <div className="pipeline-status">
-            <span>章节知识点</span>
-            <span>模型匹配</span>
-            <span>分镜脚本</span>
-            <span>视频渲染</span>
+            <span>知识点</span>
+            <span>交互模型</span>
+            <span>参数调节</span>
           </div>
         </header>
 
@@ -142,7 +166,7 @@ function App() {
 
           <section className="panel template-library">
             <div className="section-title">
-              <span>本章推荐模型</span>
+              <span>本章模型</span>
               <small>{recommendedModels.length} 个</small>
             </div>
             <div className="template-grid compact">
@@ -156,7 +180,7 @@ function App() {
               ))}
             </div>
             <div className="section-title all-model-title">
-              <span>全部模型库</span>
+              <span>通用模型库</span>
               <small>{modelTemplates.length} 个</small>
             </div>
             <div className="template-grid">
@@ -171,61 +195,7 @@ function App() {
             </div>
           </section>
 
-          <section className="panel canvas-panel">
-            <div className="section-title">
-              <span>极简可视化画布</span>
-              <small>{selectedTemplate.title}</small>
-            </div>
-            <PhysicsCanvas kind={selectedTemplate.canvasKind} />
-          </section>
-
           <ModelExplainer template={selectedTemplate} chapter={selectedChapter} />
-
-          <section className="panel workbench">
-            <div className="section-title">
-              <span>题目工作台</span>
-              <small>以后给题目就从这里生成</small>
-            </div>
-            <textarea value={problem} onChange={(event) => setProblem(event.target.value)} />
-            <div className="object-chips">
-              {selectedTemplate.objects.map((object) => (
-                <span key={object}>{object}</span>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel storyboard-panel">
-            <div className="section-title">
-              <span>视频分镜草案</span>
-              <small>简洁可视化风格</small>
-            </div>
-            <ol className="storyboard">
-              {storyboard.map((step) => (
-                <li key={step.time}>
-                  <time>{step.time}</time>
-                  <div>
-                    <strong>{step.title}</strong>
-                    <p>{step.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section className="panel source-panel">
-            <div className="section-title">
-              <span>开放素材参考</span>
-              <small>先参考，不直接硬依赖</small>
-            </div>
-            <div className="source-list">
-              {openAssetSources.map((source) => (
-                <a href={source.url} key={source.url} target="_blank">
-                  <strong>{source.title}</strong>
-                  <span>{source.note}</span>
-                </a>
-              ))}
-            </div>
-          </section>
         </div>
       </section>
     </main>
@@ -233,7 +203,14 @@ function App() {
 }
 
 function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapter: Chapter }) {
+  const [params, setParams] = useState<SimParams>(defaultParams)
   const explainer = buildModelExplainer(template, chapter)
+  const activeStepIndex = getActiveStepIndex(params.time, explainer.steps)
+  const controls = getParamControls(template.canvasKind)
+
+  function updateParam(key: keyof SimParams, value: number) {
+    setParams((current) => ({ ...current, [key]: value }))
+  }
 
   return (
     <section className="panel explainer-panel">
@@ -245,24 +222,53 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
         <div className="explainer-preview">
           <div className="preview-toolbar">
             <strong>{template.title}</strong>
-            <span>{explainer.duration}</span>
+            <span>{formatSeconds(params.time)} / 01:30</span>
           </div>
-          <PhysicsCanvas kind={template.canvasKind} />
-          <div className="playbar" aria-hidden="true">
-            <span />
+          <PhysicsCanvas kind={template.canvasKind} params={params} />
+          <div className="timeline-control">
+            <label htmlFor="model-time">
+              <span>时间轴</span>
+              <strong>{formatSeconds(params.time)}</strong>
+            </label>
+            <input
+              id="model-time"
+              type="range"
+              min="0"
+              max="90"
+              step="1"
+              value={params.time}
+              onChange={(event) => updateParam('time', Number(event.target.value))}
+            />
+            <div className="timeline-progress" aria-hidden="true">
+              <span style={{ width: `${(params.time / 90) * 100}%` }} />
+            </div>
           </div>
         </div>
 
         <div className="explainer-copy">
           <p className="explainer-goal">{explainer.goal}</p>
           <ol className="explainer-steps">
-            {explainer.steps.map((step) => (
-              <li key={step.time}>
+            {explainer.steps.map((step, index) => (
+              <li key={step.time} className={index === activeStepIndex ? 'active' : ''}>
                 <time>{step.time}</time>
                 <span>{step.text}</span>
               </li>
             ))}
           </ol>
+        </div>
+      </div>
+
+      <div className="param-panel">
+        <h3>物理参数</h3>
+        <div className="param-grid">
+          {controls.map((control) => (
+            <RangeControl
+              key={control.key}
+              control={control}
+              value={params[control.key]}
+              onChange={(value) => updateParam(control.key, value)}
+            />
+          ))}
         </div>
       </div>
 
@@ -291,6 +297,36 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
   )
 }
 
+function RangeControl({
+  control,
+  value,
+  onChange,
+}: {
+  control: ParamControl
+  value: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="range-control">
+      <span>
+        {control.label}
+        <strong>
+          {value}
+          {control.unit}
+        </strong>
+      </span>
+      <input
+        type="range"
+        min={control.min}
+        max={control.max}
+        step={control.step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
+  )
+}
+
 function TemplateButton({
   template,
   selected,
@@ -312,38 +348,6 @@ function TemplateButton({
       <p>{template.description}</p>
     </button>
   )
-}
-
-function buildStoryboard(problem: string, chapter: Chapter, template: ModelTemplate) {
-  const firstLesson = chapter.sections[0]
-  const trimmed = problem.trim()
-  return [
-    {
-      time: '00:00',
-      title: '章节定位',
-      description: `${chapter.chapterNo}《${chapter.title}》，先说明本节属于 ${chapter.domain}。`,
-    },
-    {
-      time: '00:10',
-      title: '还原题目或现象',
-      description: trimmed.length > 46 ? `${trimmed.slice(0, 46)}...` : trimmed,
-    },
-    {
-      time: '00:24',
-      title: '抽取核心知识点',
-      description: `${firstLesson.title}：${firstLesson.knowledge.join('、')}。`,
-    },
-    {
-      time: '00:42',
-      title: '模型化可视化',
-      description: `套用「${template.title}」：${template.steps.slice(0, 4).join(' → ')}。`,
-    },
-    {
-      time: '01:08',
-      title: '结论和易错点',
-      description: '只保留最终判断、核心公式和一条易错提醒，适合短视频式清晰讲解。',
-    },
-  ]
 }
 
 function buildModelExplainer(template: ModelTemplate, chapter: Chapter) {
@@ -387,20 +391,83 @@ function buildQuestionTypes(chapter: Chapter, template: ModelTemplate) {
   )
 }
 
-function PhysicsCanvas({ kind }: { kind: CanvasKind }) {
-  if (kind === 'circuit') return <CircuitScene />
-  if (kind === 'macroMicro') return <MacroMicroScene />
-  if (kind === 'graph') return <GraphScene />
-  if (kind === 'pulley') return <PulleyScene />
-  if (kind === 'field') return <ParticleFieldScene />
-  if (kind === 'optics') return <OpticsScene />
-  if (kind === 'fluid') return <FluidScene />
-  if (kind === 'energy') return <EnergyScene />
-  if (kind === 'force') return <ForceScene />
-  return <InclineScene />
+function getParamControls(kind: CanvasKind): ParamControl[] {
+  const shared: ParamControl[] = [{ key: 'force', label: '外力 F', min: 10, max: 120, step: 1, unit: 'N' }]
+  const controls: Record<CanvasKind, ParamControl[]> = {
+    incline: [
+      { key: 'angle', label: '斜面角 θ', min: 10, max: 55, step: 1, unit: '°' },
+      ...shared,
+    ],
+    force: [
+      ...shared,
+      { key: 'angle', label: '力的方向', min: -60, max: 60, step: 1, unit: '°' },
+    ],
+    circuit: [
+      { key: 'voltage', label: '电压 U', min: 1, max: 12, step: 0.5, unit: 'V' },
+      { key: 'resistance', label: '电阻 R', min: 2, max: 30, step: 1, unit: 'Ω' },
+    ],
+    macroMicro: [
+      { key: 'temperature', label: '温度 T', min: 5, max: 90, step: 1, unit: '℃' },
+      { key: 'density', label: '粒子数量', min: 20, max: 90, step: 1, unit: '%' },
+    ],
+    graph: [
+      { key: 'force', label: '速度/斜率', min: 10, max: 120, step: 1, unit: '%' },
+      { key: 'height', label: '面积显示', min: 10, max: 90, step: 1, unit: '%' },
+    ],
+    pulley: [
+      ...shared,
+      { key: 'height', label: '提升高度', min: 10, max: 90, step: 1, unit: 'cm' },
+    ],
+    field: [
+      ...shared,
+      { key: 'voltage', label: '场强', min: 1, max: 12, step: 0.5, unit: '级' },
+    ],
+    optics: [{ key: 'angle', label: '入射角', min: 10, max: 65, step: 1, unit: '°' }],
+    fluid: [
+      { key: 'height', label: '液体深度 h', min: 20, max: 90, step: 1, unit: 'cm' },
+      { key: 'density', label: '液体密度 ρ', min: 30, max: 120, step: 1, unit: '%' },
+    ],
+    energy: [
+      { key: 'temperature', label: '输入能量', min: 20, max: 100, step: 1, unit: '%' },
+      { key: 'force', label: '有效输出', min: 10, max: 90, step: 1, unit: '%' },
+    ],
+  }
+
+  return controls[kind]
 }
 
-function InclineScene() {
+function getActiveStepIndex(time: number, steps: { time: string }[]) {
+  return steps.reduce((activeIndex, step, index) => {
+    return time >= parseTime(step.time) ? index : activeIndex
+  }, 0)
+}
+
+function parseTime(time: string) {
+  const [minutes, seconds] = time.split(':').map(Number)
+  return minutes * 60 + seconds
+}
+
+function formatSeconds(value: number) {
+  const minutes = Math.floor(value / 60)
+  const seconds = Math.floor(value % 60)
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function PhysicsCanvas({ kind, params }: { kind: CanvasKind; params: SimParams }) {
+  if (kind === 'circuit') return <CircuitScene params={params} />
+  if (kind === 'macroMicro') return <MacroMicroScene params={params} />
+  if (kind === 'graph') return <GraphScene params={params} />
+  if (kind === 'pulley') return <PulleyScene params={params} />
+  if (kind === 'field') return <ParticleFieldScene params={params} />
+  if (kind === 'optics') return <OpticsScene params={params} />
+  if (kind === 'fluid') return <FluidScene params={params} />
+  if (kind === 'energy') return <EnergyScene params={params} />
+  if (kind === 'force') return <ForceScene params={params} />
+  return <InclineScene params={params} />
+}
+
+function InclineScene({ params }: { params: SimParams }) {
+  const forceEnd = 360 + params.force * 0.9
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="斜面滑块模型">
@@ -415,23 +482,26 @@ function InclineScene() {
         <text x="306" y="284" className="label">B</text>
         <text x="422" y="380" className="label">C</text>
         <path d="M 618 354 A 54 54 0 0 0 672 350" className="theta" />
-        <text x="638" y="337" className="label small">θ</text>
+        <text x="626" y="337" className="label small">θ={params.angle}°</text>
         <Arrow x1={306} y1={314} x2={306} y2={386} color="#7b3ff2" label="mg" />
         <Arrow x1={306} y1={314} x2={350} y2={258} color="#7b3ff2" label="N" />
         <Arrow x1={306} y1={314} x2={246} y2={302} color="#e04a3f" label="f" />
-        <Arrow x1={346} y1={340} x2={430} y2={356} color="#1f6feb" label="a" />
+        <Arrow x1={346} y1={340} x2={forceEnd} y2={356} color="#1f6feb" label={`F=${params.force}N`} />
       </svg>
     </div>
   )
 }
 
-function ForceScene() {
+function ForceScene({ params }: { params: SimParams }) {
+  const rad = (params.angle * Math.PI) / 180
+  const x2 = 376 + params.force * 1.5 * Math.cos(rad)
+  const y2 = 209 - params.force * 1.5 * Math.sin(rad)
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="力的三要素模型">
         <rect x="320" y="172" width="112" height="74" rx="8" className="block blue" />
         <circle cx="376" cy="209" r="7" className="node red-node" />
-        <Arrow x1={376} y1={209} x2={520} y2={209} color="#1f6feb" label="F" />
+        <Arrow x1={376} y1={209} x2={x2} y2={y2} color="#1f6feb" label={`F=${params.force}N`} />
         <Arrow x1={376} y1={209} x2={376} y2={322} color="#7b3ff2" label="G" />
         <Arrow x1={376} y1={246} x2={376} y2={135} color="#16a34a" label="N" />
         <text x="250" y="86" className="caption-label">大小、方向、作用点决定力的作用效果</text>
@@ -441,7 +511,9 @@ function ForceScene() {
   )
 }
 
-function CircuitScene() {
+function CircuitScene({ params }: { params: SimParams }) {
+  const current = params.voltage / params.resistance
+  const sliderX = 510 + params.resistance * 2.2
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="电路模型">
@@ -453,15 +525,17 @@ function CircuitScene() {
         <rect x="380" y="184" width="90" height="52" rx="8" className="resistor" />
         <text x="407" y="219" className="label small">R</text>
         <rect x="500" y="230" width="86" height="40" rx="5" className="slider" />
-        <circle cx="548" cy="230" r="8" className="node red-node" />
-        <path d="M 548 230 L 590 180" className="signal" />
-        <text x="512" y="308" className="caption-label">路径高亮 + 量表示数变化</text>
+        <circle cx={sliderX} cy="230" r="8" className="node red-node" />
+        <path d={`M ${sliderX} 230 L 590 180`} className="signal" />
+        <text x="500" y="308" className="caption-label">I={current.toFixed(2)}A，R={params.resistance}Ω</text>
       </svg>
     </div>
   )
 }
 
-function MacroMicroScene() {
+function MacroMicroScene({ params }: { params: SimParams }) {
+  const particleCount = Math.round(4 + params.density / 10)
+  const spread = 26 + params.temperature * 0.45 + params.time * 0.15
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="宏观到微观模型">
@@ -470,24 +544,32 @@ function MacroMicroScene() {
         <path d="M 166 176 C 188 216 148 240 184 286 C 220 236 196 210 230 176" className="ink" />
         <circle cx="410" cy="210" r="116" className="lens" />
         <line x1="490" y1="292" x2="584" y2="360" className="lens-handle" />
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <circle key={i} cx={365 + (i % 3) * 50} cy={170 + Math.floor(i / 3) * 62} r="14" className="particle" />
+        {Array.from({ length: particleCount }, (_, i) => (
+          <circle
+            key={i}
+            cx={360 + (i % 4) * spread}
+            cy={154 + Math.floor(i / 4) * 42 + ((params.time + i * 7) % 16)}
+            r="12"
+            className="particle"
+          />
         ))}
         <path d="M 350 190 L 420 160 L 500 205" className="particle-path" />
-        <text x="282" y="64" className="caption-label">从宏观现象放大到微观粒子</text>
+        <text x="252" y="64" className="caption-label">T={params.temperature}℃，扩散随时间推进</text>
       </svg>
     </div>
   )
 }
 
-function GraphScene() {
+function GraphScene({ params }: { params: SimParams }) {
+  const yEnd = 300 - params.force * 1.65
+  const areaX = 180 + params.height * 3.8
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="运动图像模型">
         <line x1="84" y1="318" x2="676" y2="318" className="axis" />
         <line x1="118" y1="338" x2="118" y2="76" className="axis" />
-        <polyline points="118,318 248,270 388,206 560,112" className="graph-line" />
-        <polygon points="118,318 388,206 388,318" className="area" />
+        <polyline points={`118,318 248,270 388,206 560,${yEnd}`} className="graph-line" />
+        <polygon points={`118,318 ${areaX},${Math.max(110, yEnd + 60)} ${areaX},318`} className="area" />
         <circle cx="248" cy="270" r="9" className="node red-node" />
         <circle cx="388" cy="206" r="9" className="node blue-node" />
         <rect x="126" y="350" width="72" height="34" rx="6" className="cart" />
@@ -498,7 +580,8 @@ function GraphScene() {
   )
 }
 
-function OpticsScene() {
+function OpticsScene({ params }: { params: SimParams }) {
+  const rayY = 215 - Math.tan((params.angle * Math.PI) / 180) * 170
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="光路模型">
@@ -506,8 +589,8 @@ function OpticsScene() {
         <line x1="130" y1="215" x2="630" y2="215" className="axis" />
         <path d="M 362 94 C 320 160 320 270 362 336" className="lens-outline" />
         <path d="M 398 94 C 440 160 440 270 398 336" className="lens-outline" />
-        <line x1="126" y1="135" x2="380" y2="215" className="ray" />
-        <line x1="380" y1="215" x2="636" y2="294" className="ray" />
+        <line x1="126" y1={rayY} x2="380" y2="215" className="ray" />
+        <line x1="380" y1="215" x2="636" y2={430 - rayY} className="ray" />
         <line x1="126" y1="294" x2="380" y2="215" className="ray alt" />
         <line x1="380" y1="215" x2="636" y2="135" className="ray alt" />
         <text x="288" y="56" className="caption-label">用主光线确定成像</text>
@@ -516,24 +599,27 @@ function OpticsScene() {
   )
 }
 
-function FluidScene() {
+function FluidScene({ params }: { params: SimParams }) {
+  const waterTop = 330 - params.height * 1.8
+  const pressureY = 330 - params.height * 1.2
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="流体压强和浮力模型">
         <rect x="160" y="90" width="230" height="260" rx="18" className="jar" />
-        <rect x="170" y="180" width="210" height="160" rx="8" className="water" />
+        <rect x="170" y={waterTop} width="210" height={340 - waterTop} rx="8" className="water" />
         <rect x="260" y="210" width="70" height="70" rx="8" className="block blue" />
         <Arrow x1={295} y1={280} x2={295} y2={340} color="#7b3ff2" label="G" />
         <Arrow x1={295} y1={210} x2={295} y2={138} color="#16a34a" label="F浮" />
         <line x1="470" y1="120" x2="470" y2="340" className="axis" />
-        <line x1="470" y1="260" x2="600" y2="260" className="pressure-line" />
-        <text x="506" y="246" className="caption-label">p=ρgh</text>
+        <line x1="470" y1={pressureY} x2={560 + params.density * 0.55} y2={pressureY} className="pressure-line" />
+        <text x="498" y="246" className="caption-label">p=ρgh，h={params.height}cm</text>
       </svg>
     </div>
   )
 }
 
-function EnergyScene() {
+function EnergyScene({ params }: { params: SimParams }) {
+  const fillWidth = Math.max(40, params.force * 3.4)
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="能量流模型">
@@ -546,14 +632,15 @@ function EnergyScene() {
         <text x="354" y="216" className="label small">内能</text>
         <text x="572" y="216" className="label small">机械能</text>
         <rect x="210" y="302" width="340" height="28" rx="14" className="efficiency-bg" />
-        <rect x="210" y="302" width="214" height="28" rx="14" className="efficiency-fill" />
-        <text x="284" y="360" className="caption-label">能量转化 + 损失 + 效率</text>
+        <rect x="210" y="302" width={fillWidth} height="28" rx="14" className="efficiency-fill" />
+        <text x="284" y="360" className="caption-label">输入={params.temperature}%，输出={params.force}%</text>
       </svg>
     </div>
   )
 }
 
-function PulleyScene() {
+function PulleyScene({ params }: { params: SimParams }) {
+  const loadY = 330 - params.height
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="滑轮组模型">
@@ -561,23 +648,24 @@ function PulleyScene() {
         <circle cx="250" cy="150" r="44" className="pulley" />
         <circle cx="430" cy="236" r="44" className="pulley move" />
         <path d="M250 106 L430 192 L430 280 L250 194 L250 106" className="rope" />
-        <rect x="390" y="286" width="80" height="72" rx="8" className="weight" />
-        <Arrow x1={560} y1={140} x2={642} y2={140} color="#e04a3f" label="F" />
+        <rect x="390" y={loadY} width="80" height="72" rx="8" className="weight" />
+        <Arrow x1={560} y1={140} x2={560 + params.force} y2={140} color="#e04a3f" label={`F=${params.force}N`} />
         <text x="292" y="384" className="caption-label">数绳段，建立力和位移关系</text>
       </svg>
     </div>
   )
 }
 
-function ParticleFieldScene() {
+function ParticleFieldScene({ params }: { params: SimParams }) {
+  const curveEnd = 98 + (12 - params.voltage) * 10
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="场中运动模型">
         <rect x="260" y="80" width="330" height="260" rx="10" className="field" />
-        <path d="M90 246 C210 246 260 246 332 226 C430 198 486 138 560 98" className="trajectory" />
+        <path d={`M90 246 C210 246 260 246 332 226 C430 198 486 138 560 ${curveEnd}`} className="trajectory" />
         <circle cx="126" cy="246" r="12" className="particle" />
         <Arrow x1={126} y1={246} x2={218} y2={246} color="#1f6feb" label="v" />
-        <Arrow x1={354} y1={220} x2={354} y2={156} color="#7b3ff2" label="F" />
+        <Arrow x1={354} y1={220} x2={354} y2={220 - params.force} color="#7b3ff2" label="F" />
         <text x="306" y="64" className="caption-label">场区内受力改变轨迹</text>
       </svg>
     </div>
