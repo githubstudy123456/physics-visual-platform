@@ -528,6 +528,12 @@ button {
   fill: #1f6feb;
 }
 
+.bulb-glow {
+  fill: rgba(250, 204, 21, 0.42);
+  stroke: rgba(234, 179, 8, 0.7);
+  stroke-width: 2;
+}
+
 .workbench textarea {
   width: 100%;
   min-height: 156px;
@@ -680,9 +686,28 @@ button {
 }
 
 .param-panel h3 {
-  margin: 0 0 12px;
+  margin: 0;
   color: #101828;
   font-size: 15px;
+}
+
+.param-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.param-title-row span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.lab-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 12px;
 }
 
 .param-grid {
@@ -697,6 +722,31 @@ button {
   border: 1px solid #e1e7ef;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.observation-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e1e7ef;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.observation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #eef2f6;
+  color: #667085;
+  font-size: 13px;
+}
+
+.observation-row strong {
+  color: #101828;
+  text-align: right;
 }
 
 .script-grid {
@@ -833,6 +883,7 @@ button {
 
   .explainer-layout,
   .script-grid,
+  .lab-grid,
   .param-grid {
     grid-template-columns: 1fr;
   }

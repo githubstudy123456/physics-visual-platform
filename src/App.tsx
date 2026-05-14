@@ -195,7 +195,7 @@ function App() {
             </div>
           </section>
 
-          <ModelExplainer template={selectedTemplate} chapter={selectedChapter} />
+          <ModelExplainer key={selectedTemplate.id} template={selectedTemplate} chapter={selectedChapter} />
         </div>
       </section>
     </main>
@@ -206,7 +206,8 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
   const [params, setParams] = useState<SimParams>(defaultParams)
   const explainer = buildModelExplainer(template, chapter)
   const activeStepIndex = getActiveStepIndex(params.time, explainer.steps)
-  const controls = getParamControls(template.canvasKind)
+  const controls = getParamControls(template)
+  const observations = getObservations(template, params)
 
   function updateParam(key: keyof SimParams, value: number) {
     setParams((current) => ({ ...current, [key]: value }))
@@ -224,7 +225,7 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
             <strong>{template.title}</strong>
             <span>{formatSeconds(params.time)} / 01:30</span>
           </div>
-          <PhysicsCanvas kind={template.canvasKind} params={params} />
+          <PhysicsCanvas template={template} params={params} />
           <div className="timeline-control">
             <label htmlFor="model-time">
               <span>时间轴</span>
@@ -259,16 +260,30 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
       </div>
 
       <div className="param-panel">
-        <h3>物理参数</h3>
-        <div className="param-grid">
-          {controls.map((control) => (
-            <RangeControl
-              key={control.key}
-              control={control}
-              value={params[control.key]}
-              onChange={(value) => updateParam(control.key, value)}
-            />
-          ))}
+        <div className="param-title-row">
+          <h3>物理参数</h3>
+          <span>拖动后模型即时反馈</span>
+        </div>
+        <div className="lab-grid">
+          <div className="param-grid">
+            {controls.map((control) => (
+              <RangeControl
+                key={control.key}
+                control={control}
+                value={params[control.key]}
+                onChange={(value) => updateParam(control.key, value)}
+              />
+            ))}
+          </div>
+          <div className="observation-panel">
+            <h3>观测量</h3>
+            {observations.map((item) => (
+              <div className="observation-row" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -391,8 +406,39 @@ function buildQuestionTypes(chapter: Chapter, template: ModelTemplate) {
   )
 }
 
-function getParamControls(kind: CanvasKind): ParamControl[] {
+function getParamControls(template: ModelTemplate): ParamControl[] {
   const shared: ParamControl[] = [{ key: 'force', label: '外力 F', min: 10, max: 120, step: 1, unit: 'N' }]
+  const byId: Partial<Record<string, ParamControl[]>> = {
+    'measurement-scale': [
+      { key: 'time', label: '时间 t', min: 0, max: 90, step: 1, unit: 's' },
+      { key: 'force', label: '速度 v', min: 10, max: 120, step: 1, unit: 'cm/s' },
+      { key: 'height', label: '路程 s', min: 20, max: 90, step: 1, unit: 'cm' },
+    ],
+    'sound-wave': [
+      { key: 'force', label: '频率 f', min: 10, max: 120, step: 1, unit: 'Hz' },
+      { key: 'height', label: '振幅 A', min: 10, max: 90, step: 1, unit: '%' },
+    ],
+    'state-change': [
+      { key: 'temperature', label: '温度 T', min: -20, max: 120, step: 1, unit: '℃' },
+      { key: 'density', label: '粒子间距', min: 20, max: 90, step: 1, unit: '%' },
+    ],
+    'density-particle': [
+      { key: 'density', label: '密集程度', min: 20, max: 120, step: 1, unit: '%' },
+      { key: 'height', label: '体积 V', min: 20, max: 90, step: 1, unit: 'cm³' },
+    ],
+    buoyancy: [
+      { key: 'height', label: '浸入深度', min: 5, max: 90, step: 1, unit: '%' },
+      { key: 'density', label: '液体密度 ρ', min: 30, max: 120, step: 1, unit: '%' },
+    ],
+    'electric-power': [
+      { key: 'voltage', label: '电压 U', min: 1, max: 12, step: 0.5, unit: 'V' },
+      { key: 'resistance', label: '电阻 R', min: 2, max: 30, step: 1, unit: 'Ω' },
+      { key: 'time', label: '通电时间 t', min: 0, max: 90, step: 1, unit: 's' },
+    ],
+  }
+  const modelControls = byId[template.id]
+  if (modelControls) return modelControls
+
   const controls: Record<CanvasKind, ParamControl[]> = {
     incline: [
       { key: 'angle', label: '斜面角 θ', min: 10, max: 55, step: 1, unit: '°' },
@@ -433,7 +479,57 @@ function getParamControls(kind: CanvasKind): ParamControl[] {
     ],
   }
 
-  return controls[kind]
+  return controls[template.canvasKind] ?? shared
+}
+
+function getObservations(template: ModelTemplate, params: SimParams) {
+  const current = params.voltage / params.resistance
+  const speed = params.force
+  const distance = Math.round((speed * params.time) / 100)
+  const power = params.voltage * current
+  const heat = Math.round(current * current * params.resistance * params.time)
+  const phase = params.temperature < 0 ? '固态' : params.temperature < 100 ? '液态' : '气态'
+
+  const byId: Partial<Record<string, { label: string; value: string }[]>> = {
+    'measurement-scale': [
+      { label: '路程估计', value: `${distance} cm` },
+      { label: '平均速度', value: `${speed} cm/s` },
+      { label: '读数提醒', value: '估读到分度值下一位' },
+    ],
+    'sound-wave': [
+      { label: '音调', value: params.force > 70 ? '较高' : '较低' },
+      { label: '响度', value: params.height > 55 ? '较大' : '较小' },
+      { label: '传播条件', value: '需要介质' },
+    ],
+    'state-change': [
+      { label: '物态', value: phase },
+      { label: '热量方向', value: params.temperature > 35 ? '吸热趋势' : '放热趋势' },
+      { label: '粒子运动', value: params.temperature > 60 ? '剧烈' : '较慢' },
+    ],
+    'density-particle': [
+      { label: '密度关系', value: `ρ≈${(params.density / params.height).toFixed(2)}` },
+      { label: '质量趋势', value: params.density > 70 ? '较大' : '较小' },
+      { label: '比较方法', value: '同体积比质量' },
+    ],
+    buoyancy: [
+      { label: '排开液体', value: `${params.height}%` },
+      { label: '浮力趋势', value: params.height * params.density > 4200 ? '较大' : '较小' },
+      { label: '判断依据', value: '比较 F浮 与 G' },
+    ],
+    'electric-power': [
+      { label: '电流 I', value: `${current.toFixed(2)} A` },
+      { label: '电功率 P', value: `${power.toFixed(1)} W` },
+      { label: '焦耳热 Q', value: `${heat} J` },
+    ],
+  }
+
+  return (
+    byId[template.id] ?? [
+      { label: '当前模型', value: template.title },
+      { label: '核心变量', value: template.objects.slice(0, 2).join('、') },
+      { label: '推理方式', value: template.steps.slice(0, 2).join(' → ') },
+    ]
+  )
 }
 
 function getActiveStepIndex(time: number, steps: { time: string }[]) {
@@ -453,7 +549,14 @@ function formatSeconds(value: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-function PhysicsCanvas({ kind, params }: { kind: CanvasKind; params: SimParams }) {
+function PhysicsCanvas({ template, params }: { template: ModelTemplate; params: SimParams }) {
+  if (template.id === 'measurement-scale') return <MeasurementScene params={params} />
+  if (template.id === 'sound-wave') return <SoundWaveScene params={params} />
+  if (template.id === 'state-change') return <StateChangeScene params={params} />
+  if (template.id === 'density-particle') return <DensityScene params={params} />
+  if (template.id === 'buoyancy') return <BuoyancyScene params={params} />
+  if (template.id === 'electric-power') return <ElectricPowerScene params={params} />
+  const kind = template.canvasKind
   if (kind === 'circuit') return <CircuitScene params={params} />
   if (kind === 'macroMicro') return <MacroMicroScene params={params} />
   if (kind === 'graph') return <GraphScene params={params} />
@@ -464,6 +567,144 @@ function PhysicsCanvas({ kind, params }: { kind: CanvasKind; params: SimParams }
   if (kind === 'energy') return <EnergyScene params={params} />
   if (kind === 'force') return <ForceScene params={params} />
   return <InclineScene params={params} />
+}
+
+function MeasurementScene({ params }: { params: SimParams }) {
+  const carX = 118 + params.height * 4.8
+  const graphY = 318 - params.force * 1.7
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="平均速度测量模型">
+        <line x1="88" y1="292" x2="454" y2="292" className="axis" />
+        <line x1="88" y1="326" x2="454" y2="326" className="axis" />
+        {Array.from({ length: 9 }, (_, i) => (
+          <line key={i} x1={104 + i * 40} y1="292" x2={104 + i * 40} y2="326" className="normal" />
+        ))}
+        <rect x={carX} y="248" width="82" height="42" rx="8" className="cart" />
+        <circle cx={carX + 18} cy="294" r="10" className="meter" />
+        <circle cx={carX + 62} cy="294" r="10" className="meter" />
+        <text x="92" y="356" className="caption-label">刻度尺读路程 s，秒表读时间 t</text>
+        <circle cx="588" cy="172" r="62" className="meter" />
+        <line x1="588" y1="172" x2={588 + params.time * 0.75} y2={172 - params.time * 0.35} className="signal" />
+        <text x="554" y="178" className="label small">t</text>
+        <line x1="510" y1="334" x2="690" y2="334" className="axis" />
+        <line x1="530" y1="354" x2="530" y2="180" className="axis" />
+        <polyline points={`530,334 618,${graphY} 690,${Math.max(92, graphY - 36)}`} className="graph-line" />
+      </svg>
+    </div>
+  )
+}
+
+function SoundWaveScene({ params }: { params: SimParams }) {
+  const amplitude = params.height * 0.75
+  const frequency = Math.max(4, Math.round(params.force / 12))
+  const points = Array.from({ length: 90 }, (_, i) => {
+    const x = 86 + i * 6.3
+    const y = 214 + Math.sin(i / frequency) * amplitude
+    return `${x},${y}`
+  }).join(' ')
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="声波传播模型">
+        <rect x="88" y="156" width="72" height="116" rx="10" className="resistor" />
+        <path d="M160 174 C202 194 202 234 160 254" className="signal" />
+        <polyline points={points} className="graph-line" />
+        {Array.from({ length: 18 }, (_, i) => (
+          <circle key={i} cx={218 + i * 26} cy={318 + Math.sin(i + params.time / 8) * 18} r="7" className="particle" />
+        ))}
+        <text x="92" y="92" className="caption-label">频率控制音调，振幅影响响度</text>
+        <text x="520" y="370" className="label small">f={params.force}Hz</text>
+      </svg>
+    </div>
+  )
+}
+
+function StateChangeScene({ params }: { params: SimParams }) {
+  const phase = params.temperature < 0 ? '固态' : params.temperature < 100 ? '液态' : '气态'
+  const spacing = params.temperature < 0 ? 28 : params.temperature < 100 ? 42 : 68
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="物态变化模型">
+        <rect x="90" y="284" width="560" height="24" rx="12" className="efficiency-bg" />
+        <rect x="90" y="284" width={Math.max(30, params.temperature * 4.2 + 84)} height="24" rx="12" className="efficiency-fill" />
+        <text x="96" y="262" className="caption-label">温度 T={params.temperature}℃，当前：{phase}</text>
+        <rect x="96" y="92" width="186" height="126" rx="10" className="jar" />
+        {Array.from({ length: 16 }, (_, i) => (
+          <circle key={i} cx={128 + (i % 4) * spacing} cy={124 + Math.floor(i / 4) * spacing * 0.72} r="11" className="particle" />
+        ))}
+        <Arrow x1={330} y1={156} x2={458} y2={156} color="#f97316" label="吸热" />
+        <Arrow x1={458} y1={186} x2={330} y2={186} color="#1f6feb" label="放热" />
+        <text x="488" y="170" className="label small">固 液 气</text>
+      </svg>
+    </div>
+  )
+}
+
+function DensityScene({ params }: { params: SimParams }) {
+  const particleCount = Math.round(params.density / 6)
+  const boxSize = 70 + params.height
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="密度粒子模型">
+        <rect x="116" y="110" width={boxSize} height={boxSize} rx="8" className="jar" />
+        {Array.from({ length: particleCount }, (_, i) => (
+          <circle
+            key={i}
+            cx={136 + (i % 5) * 24}
+            cy={132 + Math.floor(i / 5) * 22}
+            r="8"
+            className="particle"
+          />
+        ))}
+        <rect x="444" y="138" width="170" height="76" rx="8" className="energy-box" />
+        <text x="482" y="186" className="label small">ρ=m/V</text>
+        <Arrow x1={280} y1={176} x2={430} y2={176} color="#1f6feb" label="比较" />
+        <text x="102" y="306" className="caption-label">同体积下，粒子越密集，质量越大，密度越大</text>
+      </svg>
+    </div>
+  )
+}
+
+function BuoyancyScene({ params }: { params: SimParams }) {
+  const waterTop = 300 - params.height * 1.7
+  const blockY = 146 + (90 - params.height) * 1.25
+  const buoyancy = Math.round(params.height * params.density / 100)
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="浮力模型">
+        <rect x="146" y="80" width="250" height="282" rx="18" className="jar" />
+        <rect x="156" y={waterTop} width="230" height={352 - waterTop} rx="8" className="water" />
+        <rect x="242" y={blockY} width="72" height="72" rx="8" className="block blue" />
+        <Arrow x1={278} y1={blockY} x2={278} y2={blockY - buoyancy} color="#16a34a" label="F浮" />
+        <Arrow x1={278} y1={blockY + 72} x2={278} y2={blockY + 142} color="#7b3ff2" label="G" />
+        <rect x="480" y="112" width="150" height="44" rx="8" className="energy-box" />
+        <rect x="480" y="186" width={80 + buoyancy} height="32" rx="8" className="efficiency-fill" />
+        <text x="498" y="144" className="label small">F浮=G排</text>
+        <text x="470" y="268" className="caption-label">浸入越多，排开液体越多</text>
+      </svg>
+    </div>
+  )
+}
+
+function ElectricPowerScene({ params }: { params: SimParams }) {
+  const current = params.voltage / params.resistance
+  const power = params.voltage * current
+  const glow = Math.min(1, power / 18)
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="电功率模型">
+        <rect x="130" y="92" width="500" height="236" rx="12" className="wire-box" />
+        <circle cx="278" cy="210" r="42" className="meter" />
+        <circle cx="278" cy="210" r={18 + glow * 26} className="bulb-glow" />
+        <text x="258" y="218" className="label small">灯</text>
+        <rect x="410" y="184" width="92" height="52" rx="8" className="resistor" />
+        <text x="430" y="218" className="label small">R</text>
+        <line x1="130" y1="210" x2="630" y2="210" className="wire" />
+        <rect x="154" y="288" width={Math.min(360, power * 18)} height="24" rx="12" className="efficiency-fill" />
+        <text x="152" y="360" className="caption-label">P=UI={power.toFixed(1)}W，亮度看实际功率</text>
+      </svg>
+    </div>
+  )
 }
 
 function InclineScene({ params }: { params: SimParams }) {
