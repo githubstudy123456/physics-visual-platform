@@ -179,6 +179,8 @@ function App() {
             <PhysicsCanvas kind={selectedTemplate.canvasKind} />
           </section>
 
+          <ModelExplainer template={selectedTemplate} chapter={selectedChapter} />
+
           <section className="panel workbench">
             <div className="section-title">
               <span>题目工作台</span>
@@ -227,6 +229,65 @@ function App() {
         </div>
       </section>
     </main>
+  )
+}
+
+function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapter: Chapter }) {
+  const explainer = buildModelExplainer(template, chapter)
+
+  return (
+    <section className="panel explainer-panel">
+      <div className="section-title">
+        <span>通用模型讲解</span>
+        <small>平台内置讲解模板</small>
+      </div>
+      <div className="explainer-layout">
+        <div className="explainer-preview">
+          <div className="preview-toolbar">
+            <strong>{template.title}</strong>
+            <span>{explainer.duration}</span>
+          </div>
+          <PhysicsCanvas kind={template.canvasKind} />
+          <div className="playbar" aria-hidden="true">
+            <span />
+          </div>
+        </div>
+
+        <div className="explainer-copy">
+          <p className="explainer-goal">{explainer.goal}</p>
+          <ol className="explainer-steps">
+            {explainer.steps.map((step) => (
+              <li key={step.time}>
+                <time>{step.time}</time>
+                <span>{step.text}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <div className="script-grid">
+        <div>
+          <h3>讲解词</h3>
+          <div className="script-lines">
+            {explainer.script.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h3>常见题型</h3>
+          <div className="question-types">
+            {explainer.questionTypes.map((type) => (
+              <span key={type}>{type}</span>
+            ))}
+          </div>
+          <p className="render-note">
+            通用模型在平台里固定沉淀；你后面把具体题目发在对话里，我按该模型单独生成分镜、配音和 MP4。
+          </p>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -283,6 +344,47 @@ function buildStoryboard(problem: string, chapter: Chapter, template: ModelTempl
       description: '只保留最终判断、核心公式和一条易错提醒，适合短视频式清晰讲解。',
     },
   ]
+}
+
+function buildModelExplainer(template: ModelTemplate, chapter: Chapter) {
+  const primaryLesson = chapter.sections[0]
+  const coreKnowledge = primaryLesson.knowledge.slice(0, 3).join('、')
+  const steps = [
+    { time: '00:00', text: `先给出${chapter.domain}中的典型现象。` },
+    { time: '00:12', text: `隐藏复杂条件，只保留${template.objects.slice(0, 3).join('、')}。` },
+    { time: '00:26', text: `把现象抽象成「${template.title}」。` },
+    { time: '00:42', text: template.steps[0] },
+    { time: '00:58', text: template.steps[1] ?? '标出关键物理量和方向。' },
+    { time: '01:14', text: '回到题目或实验，给出判断方法。' },
+  ]
+
+  return {
+    duration: '约 90 秒',
+    goal: `${template.explainer.goal} 对应「${chapter.title}」里的${coreKnowledge}。`,
+    steps,
+    script: [
+      `这一类题先不要急着代公式。我们先看图中真正起作用的对象：${template.objects.join('、')}。`,
+      ...template.explainer.narration,
+      `讲解时按这个顺序推进：${template.steps.slice(0, 4).join('，')}。每一步只解决一个问题。`,
+    ],
+    questionTypes: buildQuestionTypes(chapter, template),
+  }
+}
+
+function buildQuestionTypes(chapter: Chapter, template: ModelTemplate) {
+  const generic = ['判断物理过程', '提取关键量', '建立关系式', '解释易错点']
+  const domainTypes: Record<string, string[]> = {
+    力学: ['受力分析', '运动状态判断', '压强浮力综合'],
+    电学: ['电路识别', '表计变化', '功率与安全用电'],
+    热学: ['宏观现象解释', '微观粒子模型', '能量转化'],
+    光学: ['光路作图', '成像规律', '实验现象解释'],
+    声学: ['波形识别', '音调响度判断', '传播条件'],
+  }
+
+  return [...template.explainer.commonTasks, ...(domainTypes[chapter.domain] ?? []), ...generic].slice(
+    0,
+    6,
+  )
 }
 
 function PhysicsCanvas({ kind }: { kind: CanvasKind }) {

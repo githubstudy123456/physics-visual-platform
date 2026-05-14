@@ -21,6 +21,11 @@ export type ModelTemplate = {
   description: string
   objects: string[]
   steps: string[]
+  explainer: {
+    goal: string
+    narration: string[]
+    commonTasks: string[]
+  }
 }
 
 export type LessonSection = {
@@ -88,6 +93,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用简洁标尺、秒表和数轴展示单位换算、估读、误差和平均速度测量。',
     objects: ['刻度尺', '秒表', '小车', '斜面', 's-t 表格'],
     steps: ['显示测量工具', '标出分度值', '读取数据', '计算平均速度'],
+    explainer: explain(
+      '让学生看懂“测什么、怎么读、怎么算”。',
+      ['先看测量对象，再看工具分度值。', '读数要估读到分度值下一位。', '平均速度只用总路程除以总时间。'],
+      ['平均速度实验', '刻度尺读数', '单位换算'],
+    ),
   },
   {
     id: 'sound-wave',
@@ -98,6 +108,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用疏密波、振幅和频率展示声音产生、传播、音调、响度和音色。',
     objects: ['声源', '介质粒子', '波形', '振幅', '频率'],
     steps: ['声源振动', '介质传声', '改变频率', '改变振幅', '应用与噪声'],
+    explainer: explain(
+      '把看不见的声传播转成可见波形和粒子振动。',
+      ['声音由物体振动产生。', '声音传播需要介质，真空不能传声。', '频率决定音调，振幅影响响度。'],
+      ['音调响度辨析', '声速计算', '噪声控制'],
+    ),
   },
   {
     id: 'state-change',
@@ -108,6 +123,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '宏观显示冰、水、蒸气，微观显示粒子间距和能量变化。',
     objects: ['温度计', '冰块', '水', '水蒸气', '粒子间距'],
     steps: ['温度读取', '熔化凝固', '汽化液化', '升华凝华', '吸放热总结'],
+    explainer: explain(
+      '用粒子间距和能量变化解释六种物态变化。',
+      ['先判断初末状态。', '固体、液体、气体的粒子间距逐渐变大。', '向高能状态变化通常吸热，反向放热。'],
+      ['物态变化判断', '吸热放热判断', '温度图像'],
+    ),
   },
   {
     id: 'light-ray',
@@ -118,6 +138,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用光线、法线、镜面、透镜和像点构建反射、折射、平面镜与凸透镜成像。',
     objects: ['入射光线', '反射光线', '折射光线', '法线', '透镜', '像'],
     steps: ['画主光线', '标角度', '形成像点', '总结规律'],
+    explainer: explain(
+      '把光学题统一成“画光线、找交点、判成像”。',
+      ['先画法线或主光轴。', '反射看等角，折射看偏折方向。', '凸透镜成像用三条特殊光线确定像。'],
+      ['平面镜成像', '凸透镜成像', '折射作图'],
+    ),
   },
   {
     id: 'density-particle',
@@ -128,6 +153,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用相同体积不同粒子密集程度解释密度，并连接天平、量筒测量流程。',
     objects: ['天平', '量筒', '物块', '粒子密集程度', 'ρ=m/V'],
     steps: ['测质量', '测体积', '比较粒子密度', '计算密度'],
+    explainer: explain(
+      '把密度从公式变成“同体积装了多少质量”的直观比较。',
+      ['质量表示物体含有物质多少。', '体积相同，质量越大，密度越大。', '测密度要分别测出质量和体积。'],
+      ['密度计算', '空心实心判断', '测固体/液体密度'],
+    ),
   },
   {
     id: 'force-vector',
@@ -138,6 +168,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用箭头展示力的大小、方向、作用点，以及弹力、重力的典型画法。',
     objects: ['物体', '力箭头', '作用点', '弹簧', '重心'],
     steps: ['确定对象', '画作用点', '画方向', '标大小', '判断效果'],
+    explainer: explain(
+      '训练学生先找受力对象，再用箭头表达力。',
+      ['力不能离开物体单独存在。', '一个力至少要说明大小、方向、作用点。', '重力竖直向下，弹力来自形变。'],
+      ['画力示意图', '相互作用力', '弹簧测力计读数'],
+    ),
   },
   {
     id: 'newton-friction',
@@ -148,6 +183,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '展示惯性、二力平衡、摩擦力方向和大小变化。',
     objects: ['小车', '木块', '拉力', '摩擦力', '支持力', '重力'],
     steps: ['判断运动状态', '受力分析', '二力平衡', '摩擦力判断'],
+    explainer: explain(
+      '用运动状态反推受力关系，解决平衡和摩擦判断。',
+      ['静止或匀速直线运动时合力为零。', '摩擦力总是阻碍相对运动或相对运动趋势。', '先判断状态，再画受力。'],
+      ['二力平衡', '摩擦力方向', '惯性现象'],
+    ),
   },
   {
     id: 'pressure-fluid',
@@ -158,6 +198,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用受力面积、液柱深度和连通器展示固体压强、液体压强和大气压。',
     objects: ['压力 F', '受力面积 S', '液柱', '深度 h', '压强计'],
     steps: ['比较面积', '显示液柱', '深度变化', '压强变化'],
+    explainer: explain(
+      '把压强题拆成压力、面积、深度三个可视变量。',
+      ['固体压强看压力和受力面积。', '液体压强随深度增加而增大。', '流速越大的位置压强越小。'],
+      ['固体压强比较', '液体压强计算', '流体压强现象'],
+    ),
   },
   {
     id: 'buoyancy',
@@ -168,6 +213,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用排开液体体积、浮力箭头和重力箭头展示阿基米德原理与浮沉条件。',
     objects: ['物体', '液体', '排开体积', '浮力', '重力'],
     steps: ['浸入液体', '显示排开体积', '比较 F浮 和 G', '判断浮沉'],
+    explainer: explain(
+      '用“排开多少液体”和“浮力重力比较”统一浮力题。',
+      ['浮力方向竖直向上。', '浮力大小等于排开液体所受重力。', '比较浮力和重力判断上浮、悬浮、下沉。'],
+      ['称重法求浮力', '阿基米德原理', '浮沉条件'],
+    ),
   },
   {
     id: 'work-energy',
@@ -178,6 +228,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用力和位移同向关系、能量条和高度变化展示功、功率、动能、势能。',
     objects: ['力 F', '位移 s', '速度 v', '高度 h', '能量条'],
     steps: ['判断是否做功', '计算功率', '能量转化', '机械能守恒/损失'],
+    explainer: explain(
+      '用能量条展示做功和能量转化，而不是只背公式。',
+      ['做功要同时有力和沿力方向的距离。', '功率表示做功快慢。', '动能看质量和速度，势能看高度或形变。'],
+      ['是否做功', '功率计算', '机械能转化'],
+    ),
   },
   {
     id: 'pulley-system',
@@ -188,6 +243,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用杠杆力臂、滑轮绳段和机械效率条展示简单机械的省力与效率。',
     objects: ['杠杆', '支点', '力臂', '定滑轮', '动滑轮', '绳段'],
     steps: ['画结构', '标力臂/绳段', '列关系', '计算效率'],
+    explainer: explain(
+      '把简单机械问题统一成力、距离、效率三件事。',
+      ['杠杆先找支点，再画力臂。', '滑轮组先数承担重物的绳段。', '机械效率等于有用功与总功之比。'],
+      ['杠杆平衡', '滑轮组省力', '机械效率'],
+    ),
   },
   {
     id: 'macro-micro',
@@ -198,6 +258,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '先展示宏观扩散，再用放大镜推进到分子无规则运动。',
     objects: ['宏观实验图', '放大镜', '分子粒子', '运动轨迹', '扩散云团'],
     steps: ['宏观现象', '提出问题', '镜头放大', '粒子运动', '概念总结'],
+    explainer: explain(
+      '从宏观现象逐步放大到微观粒子，解释热运动。',
+      ['先看香水或墨水扩散。', '再把镜头放大到水内部。', '粒子一直在无规则运动，温度越高运动越剧烈。'],
+      ['扩散现象', '分子热运动', '温度影响扩散'],
+    ),
   },
   {
     id: 'heat-engine',
@@ -208,6 +273,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用能量流向图展示燃料化学能、内能、机械能和效率损失。',
     objects: ['燃料', '气缸', '活塞', '能量箭头', '效率条'],
     steps: ['燃烧放热', '推动活塞', '能量转化', '效率分析'],
+    explainer: explain(
+      '用能量流向解释热机和热机效率。',
+      ['燃料燃烧释放内能。', '内能推动活塞转化为机械能。', '一部分能量会散失，所以效率小于百分之百。'],
+      ['四冲程热机', '热值', '热机效率'],
+    ),
   },
   {
     id: 'circuit-basic',
@@ -218,6 +288,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用统一电路符号和高亮电流路径展示电荷、电流、串联和并联。',
     objects: ['电源', '开关', '灯泡', '导线', '电流方向'],
     steps: ['识别元件', '闭合电路', '电流路径', '串并联对比'],
+    explainer: explain(
+      '把电路图变成可追踪的电流路径。',
+      ['先判断电路是否闭合。', '串联只有一条电流路径。', '并联有分支，干路电流等于各支路之和。'],
+      ['串并联识别', '电流表接法', '电路故障'],
+    ),
   },
   {
     id: 'voltage-resistance',
@@ -228,6 +303,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '展示电压表接法、电阻影响因素、滑动变阻器接入长度。',
     objects: ['电压表', '电阻', '滑动变阻器', '滑片', '电路路径'],
     steps: ['接入电压表', '比较电阻', '滑片移动', '读数变化'],
+    explainer: explain(
+      '用滑片和接入长度解释电阻变化。',
+      ['电压表要并联在被测用电器两端。', '电阻与材料、长度、横截面积和温度有关。', '滑动变阻器改变的是接入电路的电阻丝长度。'],
+      ['电压表读数', '滑动变阻器', '动态电路'],
+    ),
   },
   {
     id: 'ohm-law',
@@ -238,6 +318,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用电路和 U-I 图像同步展示电流、电压、电阻的定量关系。',
     objects: ['电源', '电阻', '电流表', '电压表', 'U-I 图像'],
     steps: ['控制变量', '记录数据', '生成图像', '应用公式'],
+    explainer: explain(
+      '把欧姆定律从公式变成电路和图像的同步关系。',
+      ['电阻一定时，电流与电压成正比。', '电压一定时，电流与电阻成反比。', '计算前先确认是否同一段电路。'],
+      ['I=U/R', '伏安法测电阻', '动态电路计算'],
+    ),
   },
   {
     id: 'electric-power',
@@ -248,6 +333,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用灯泡亮度、功率条和发热量展示 P=UI 与 Q=I²Rt。',
     objects: ['灯泡', '电流', '电压', '功率条', '热量条'],
     steps: ['电功转化', '功率比较', '测小灯泡功率', '焦耳热'],
+    explainer: explain(
+      '用亮度和发热条解释电功率和焦耳定律。',
+      ['电功率表示用电器消耗电能的快慢。', '灯泡亮暗主要看实际功率。', '电流热效应与电流平方、阻值和时间有关。'],
+      ['额定/实际功率', '测小灯泡功率', '焦耳定律'],
+    ),
   },
   {
     id: 'home-electric',
@@ -258,6 +348,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用火线零线、开关、保险丝、漏电保护器展示家庭电路安全。',
     objects: ['火线', '零线', '开关', '用电器', '保险丝', '人体触电路径'],
     steps: ['画家庭电路', '找危险接法', '过载短路', '安全用电'],
+    explainer: explain(
+      '用电流路径解释家庭电路危险点。',
+      ['开关应接在火线上。', '电流过大常见原因是总功率过大或短路。', '安全用电核心是避免人体成为电流通路。'],
+      ['家庭电路接法', '短路过载', '安全用电'],
+    ),
   },
   {
     id: 'electromagnetism',
@@ -268,6 +363,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用磁感线、通电螺线管、电动机和电磁感应展示电磁关系。',
     objects: ['磁体', '磁感线', '线圈', '电流方向', '运动方向'],
     steps: ['显示磁场', '通电生磁', '受力转动', '切割磁感线'],
+    explainer: explain(
+      '用磁感线、线圈和方向规则串起电与磁。',
+      ['磁场用磁感线描述方向。', '电流周围存在磁场。', '通电导线在磁场中受力，切割磁感线会产生感应电流。'],
+      ['电生磁', '电动机', '发电机'],
+    ),
   },
   {
     id: 'info-energy',
@@ -278,6 +378,11 @@ export const modelTemplates: ModelTemplate[] = [
     description: '用信号链路和能源流向图展示电磁波通信、能源分类和可持续发展。',
     objects: ['发射端', '电磁波', '接收端', '能源流', '环境影响'],
     steps: ['信号产生', '传播接收', '能源分类', '可持续判断'],
+    explainer: explain(
+      '用流程图讲清信息传递和能源利用。',
+      ['电话把声信号转化为电信号。', '电磁波可以在真空中传播。', '能源利用要同时考虑效率、储量和环境影响。'],
+      ['电磁波通信', '能源分类', '可持续发展'],
+    ),
   },
 ]
 
@@ -463,4 +568,8 @@ function chapter(
 
 function section(title: string, knowledge: string[], modelIds: string[]): LessonSection {
   return { title, knowledge, modelIds }
+}
+
+function explain(goal: string, narration: string[], commonTasks: string[]) {
+  return { goal, narration, commonTasks }
 }
