@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Bodies, Body, Composite, Engine } from 'matter-js'
 import {
   books,
   chapters,
@@ -604,6 +605,71 @@ function formatSeconds(value: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+function runProjectileEngine(params: SimParams) {
+  const engine = Engine.create()
+  engine.gravity.y = 0.9
+  const angle = (params.angle * Math.PI) / 180
+  const speed = params.force / 5.6
+  const ball = Bodies.circle(80, 300, 9, {
+    frictionAir: 0,
+    restitution: 0,
+  })
+  Body.setVelocity(ball, {
+    x: Math.cos(angle) * speed,
+    y: -Math.sin(angle) * speed,
+  })
+  Composite.add(engine.world, ball)
+
+  const steps = Math.max(1, Math.round(params.time * 1.2))
+  const trail: { x: number; y: number }[] = []
+  for (let i = 0; i <= steps; i += 1) {
+    Engine.update(engine, 1000 / 60)
+    if (i % 4 === 0) {
+      trail.push({ x: ball.position.x, y: ball.position.y })
+    }
+  }
+
+  return {
+    x: Math.min(690, ball.position.x),
+    y: Math.min(352, ball.position.y),
+    vx: ball.velocity.x,
+    vy: ball.velocity.y,
+    trail,
+  }
+}
+
+function runKinematicsEngine(params: SimParams) {
+  const engine = Engine.create()
+  engine.gravity.y = 0
+  engine.gravity.x = params.force / 280
+  const cart = Bodies.rectangle(80, 110, 84, 44, {
+    frictionAir: 0,
+    inertia: Number.POSITIVE_INFINITY,
+  })
+  Body.setVelocity(cart, { x: params.height / 22, y: 0 })
+  Composite.add(engine.world, cart)
+
+  const steps = Math.max(1, Math.round(params.time * 1.25))
+  const samples: { t: number; v: number; x: number }[] = []
+  for (let i = 0; i <= steps; i += 1) {
+    Engine.update(engine, 1000 / 60)
+    if (i % 8 === 0) {
+      samples.push({
+        t: i / 12,
+        v: cart.velocity.x,
+        x: cart.position.x,
+      })
+    }
+  }
+
+  return {
+    x: Math.min(646, cart.position.x),
+    v: cart.velocity.x,
+    samples,
+    bodies: Composite.allBodies(engine.world).length,
+  }
+}
+
 function PhysicsCanvas({ template, params }: { template: ModelTemplate; params: SimParams }) {
   if (template.id === 'measurement-scale') return <MeasurementScene params={params} />
   if (template.id === 'kinematics-graph') return <KinematicsScene params={params} />
@@ -657,17 +723,11 @@ function MeasurementScene({ params }: { params: SimParams }) {
 }
 
 function KinematicsScene({ params }: { params: SimParams }) {
-  const t = params.time / 12
-  const v0 = params.height / 5
-  const a = params.force / 18
-  const velocity = Math.max(0, v0 + a * t)
-  const displacement = Math.max(0, v0 * t + 0.5 * a * t * t)
-  const cartX = Math.min(646, 92 + displacement * 10)
-  const graphPoints = Array.from({ length: 12 }, (_, i) => {
-    const gt = i / 1.4
-    const gv = Math.max(0, v0 + a * gt)
-    return `${110 + gt * 38},${332 - gv * 9}`
-  }).join(' ')
+  const simulation = runKinematicsEngine(params)
+  const graphPoints = simulation.samples
+    .map((sample) => `${110 + sample.t * 38},${332 - Math.max(0, sample.v) * 12}`)
+    .join(' ')
+  const graphArea = graphPoints ? `110,340 ${graphPoints} 430,340` : '110,340 430,340'
 
   return (
     <div className="visual-canvas">
@@ -677,20 +737,20 @@ function KinematicsScene({ params }: { params: SimParams }) {
         {Array.from({ length: 11 }, (_, i) => (
           <line key={i} x1={92 + i * 56} y1="136" x2={92 + i * 56} y2="172" className="normal" />
         ))}
-        <rect x={cartX} y="106" width="84" height="44" rx="8" className="cart" />
-        <circle cx={cartX + 18} cy="154" r="10" className="meter" />
-        <circle cx={cartX + 66} cy="154" r="10" className="meter" />
-        <Arrow x1={cartX + 42} y1={98} x2={cartX + 42 + velocity * 4} y2={98} color="#1f6feb" label="v" />
-        <Arrow x1={cartX + 42} y1={82} x2={cartX + 42 + a * 24} y2={82} color="#f97316" label="a" />
+        <rect x={simulation.x} y="106" width="84" height="44" rx="8" className="cart" />
+        <circle cx={simulation.x + 18} cy="154" r="10" className="meter" />
+        <circle cx={simulation.x + 66} cy="154" r="10" className="meter" />
+        <Arrow x1={simulation.x + 42} y1={98} x2={simulation.x + 42 + simulation.v * 10} y2={98} color="#1f6feb" label="v" />
+        <Arrow x1={simulation.x + 42} y1={82} x2={simulation.x + 42 + params.force * 0.9} y2={82} color="#f97316" label="a" />
 
         <line x1="88" y1="340" x2="430" y2="340" className="axis" />
         <line x1="110" y1="352" x2="110" y2="210" className="axis" />
         <polyline points={graphPoints} className="graph-line" />
-        <polygon points={`110,340 ${graphPoints} 430,340`} className="area" />
+        <polygon points={graphArea} className="area" />
         <text x="132" y="216" className="caption-label">v-t 图像：斜率是加速度，面积是位移</text>
         <rect x="500" y="240" width="180" height="92" rx="8" className="energy-box" />
-        <text x="522" y="278" className="label small">v={velocity.toFixed(1)}m/s</text>
-        <text x="522" y="314" className="label small">x={displacement.toFixed(1)}m</text>
+        <text x="522" y="278" className="label small">v={simulation.v.toFixed(1)}m/s</text>
+        <text x="522" y="314" className="label small">Matter.js</text>
       </svg>
     </div>
   )
@@ -742,17 +802,8 @@ function SoundWaveScene({ params }: { params: SimParams }) {
 }
 
 function ProjectileScene({ params }: { params: SimParams }) {
-  const angle = (params.angle * Math.PI) / 180
-  const speed = params.force / 7
-  const t = params.time / 18
-  const x = 104 + speed * Math.cos(angle) * t * 34
-  const y = 330 - (speed * Math.sin(angle) * t * 38 - 0.5 * 9.8 * t * t * 15)
-  const path = Array.from({ length: 36 }, (_, i) => {
-    const ti = i / 6
-    const px = 104 + speed * Math.cos(angle) * ti * 34
-    const py = 330 - (speed * Math.sin(angle) * ti * 38 - 0.5 * 9.8 * ti * ti * 15)
-    return `${Math.min(px, 690)},${Math.min(352, py)}`
-  }).join(' ')
+  const simulation = runProjectileEngine(params)
+  const path = simulation.trail.map((point) => `${Math.min(point.x, 690)},${Math.min(point.y, 352)}`).join(' ')
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="平抛和斜抛运动模型">
@@ -760,10 +811,11 @@ function ProjectileScene({ params }: { params: SimParams }) {
         <line x1="84" y1="352" x2="700" y2="352" className="axis" />
         <line x1="104" y1="70" x2="104" y2="352" className="axis" />
         <polyline points={path} className="trajectory" />
-        <circle cx={Math.min(x, 690)} cy={Math.min(y, 352)} r="13" className="particle" />
-        <Arrow x1={Math.min(x, 690)} y1={Math.min(y, 352)} x2={Math.min(x, 690) + 82} y2={Math.min(y, 352)} color="#1f6feb" label="vx" />
-        <Arrow x1={Math.min(x, 690)} y1={Math.min(y, 352)} x2={Math.min(x, 690)} y2={Math.min(y, 352) + 74} color="#7b3ff2" label="g" />
+        <circle cx={simulation.x} cy={simulation.y} r="13" className="particle" />
+        <Arrow x1={simulation.x} y1={simulation.y} x2={simulation.x + simulation.vx * 5} y2={simulation.y} color="#1f6feb" label="vx" />
+        <Arrow x1={simulation.x} y1={simulation.y} x2={simulation.x} y2={simulation.y + 74} color="#7b3ff2" label="g" />
         <text x="360" y="70" className="caption-label">水平方向匀速，竖直方向自由落体</text>
+        <text x="460" y="110" className="caption-label">Matter.js 刚体步进</text>
       </svg>
     </div>
   )
