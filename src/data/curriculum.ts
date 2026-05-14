@@ -81,6 +81,46 @@ export const books: Book[] = [
     volume: '全一册',
     source: '本地 PDF：新人教版九年级物理全一册-电子课本.pdf',
   },
+  {
+    id: 'rj-high-required-1',
+    title: '人教版高中物理必修第一册',
+    stage: '高中',
+    grade: '高中',
+    volume: '必修第一册',
+    source: '高中物理教材结构：运动、相互作用、牛顿运动定律。',
+  },
+  {
+    id: 'rj-high-required-2',
+    title: '人教版高中物理必修第二册',
+    stage: '高中',
+    grade: '高中',
+    volume: '必修第二册',
+    source: '高中物理教材结构：曲线运动、万有引力、机械能。',
+  },
+  {
+    id: 'rj-high-required-3',
+    title: '人教版高中物理必修第三册',
+    stage: '高中',
+    grade: '高中',
+    volume: '必修第三册',
+    source: '高中物理教材结构：静电场、电路、电磁场与能源。',
+  },
+  {
+    id: 'rj-high-selective-1',
+    title: '人教版高中物理选择性必修第一册',
+    stage: '高中',
+    grade: '高中',
+    volume: '选择性必修第一册',
+    source: '高中物理教材结构：动量、机械振动、机械波、光。',
+  },
+  {
+    id: 'rj-high-selective-2',
+    title: '人教版高中物理选择性必修第二册',
+    stage: '高中',
+    grade: '高中',
+    volume: '选择性必修第二册',
+    source: '高中物理教材结构：磁场、电磁感应、交变电流。',
+  },
 ]
 
 export const modelTemplates: ModelTemplate[] = [
@@ -384,6 +424,96 @@ export const modelTemplates: ModelTemplate[] = [
       ['电磁波通信', '能源分类', '可持续发展'],
     ),
   },
+  {
+    id: 'kinematics-graph',
+    title: '匀变速直线运动模型',
+    domain: '高中运动学',
+    level: '高频',
+    canvasKind: 'graph',
+    description: '用小车轨迹、v-t 图像和面积关系展示位移、速度、加速度。',
+    objects: ['小车', '位移 x', '速度 v', '加速度 a', 'v-t 图像'],
+    steps: ['设定初速度', '调节加速度', '观察速度变化', '用图像面积求位移'],
+    explainer: explain(
+      '让学生把运动公式和 v-t 图像联系起来。',
+      ['速度图像的斜率表示加速度。', '速度图像与时间轴围成的面积表示位移。', '先判运动类型，再选公式。'],
+      ['匀变速计算', 'v-t 图像', '追及相遇'],
+    ),
+  },
+  {
+    id: 'projectile-motion',
+    title: '平抛/斜抛运动模型',
+    domain: '高中曲线运动',
+    level: '高频',
+    canvasKind: 'field',
+    description: '把曲线运动分解为水平方向匀速和竖直方向自由落体。',
+    objects: ['抛体', '初速度 v0', '重力 g', '水平位移', '竖直位移'],
+    steps: ['分解运动', '调节初速度', '观察轨迹', '读出落点'],
+    explainer: explain(
+      '用运动分解解释抛体轨迹。',
+      ['水平方向速度不变。', '竖直方向只受重力，做匀变速运动。', '两个方向共用同一个时间。'],
+      ['平抛落点', '斜抛射程', '运动分解'],
+    ),
+  },
+  {
+    id: 'circular-gravity',
+    title: '圆周运动/万有引力模型',
+    domain: '高中力学',
+    level: '综合',
+    canvasKind: 'field',
+    description: '用轨道、向心力和速度方向展示圆周运动与天体运动。',
+    objects: ['轨道', '速度 v', '向心力 F', '半径 r', '天体'],
+    steps: ['显示轨道', '标出速度切线', '标出向心力', '调节半径和速度'],
+    explainer: explain(
+      '把圆周运动看成速度方向不断改变的运动。',
+      ['速度方向沿切线。', '合力指向圆心提供向心力。', '天体运动中万有引力充当向心力。'],
+      ['向心力计算', '卫星运动', '临界速度'],
+    ),
+  },
+  {
+    id: 'electrostatic-field',
+    title: '静电场与电势模型',
+    domain: '高中电磁学',
+    level: '高频',
+    canvasKind: 'field',
+    description: '用电场线、等势线和试探电荷运动展示电场强度与电势差。',
+    objects: ['点电荷', '电场线', '等势线', '试探电荷', '电势差'],
+    steps: ['放置电荷', '显示电场线', '移动试探电荷', '比较电势'],
+    explainer: explain(
+      '把抽象电场转成可读的方向和能量变化。',
+      ['电场线方向表示正电荷受力方向。', '电场线越密，场强越大。', '沿电场方向电势降低。'],
+      ['电场强度', '电势差', '带电粒子运动'],
+    ),
+  },
+  {
+    id: 'shm-wave',
+    title: '机械振动与机械波模型',
+    domain: '高中振动波动',
+    level: '综合',
+    canvasKind: 'graph',
+    description: '用弹簧振子、位移图像和波形传播展示周期、频率、波长和波速。',
+    objects: ['弹簧振子', '振幅 A', '周期 T', '波长 λ', '波速 v'],
+    steps: ['调节振幅', '调节频率', '观察相位', '比较波速关系'],
+    explainer: explain(
+      '让振动和波从图像变成可操作的运动。',
+      ['单个质点做周期性振动。', '波是振动形式在介质中的传播。', '波速满足 v=λf。'],
+      ['简谐运动', '波长频率波速', '波形图像'],
+    ),
+  },
+  {
+    id: 'magnetic-induction',
+    title: '磁场与电磁感应模型',
+    domain: '高中电磁学',
+    level: '综合',
+    canvasKind: 'field',
+    description: '用线圈、磁场和磁通量变化展示安培力、电磁感应和楞次定律。',
+    objects: ['磁场 B', '线圈', '磁通量 Φ', '感应电流', '运动方向'],
+    steps: ['显示磁场', '移动导体或磁体', '观察磁通变化', '判断感应电流方向'],
+    explainer: explain(
+      '用磁通量变化统一电磁感应判断。',
+      ['闭合回路磁通量发生变化时产生感应电流。', '感应电流的磁场总是阻碍原磁通量的变化。', '方向判断用楞次定律或右手定则。'],
+      ['感应电流方向', '法拉第电磁感应', '交流发电机'],
+    ),
+  },
 ]
 
 export const chapters: Chapter[] = [
@@ -516,6 +646,89 @@ export const chapters: Chapter[] = [
     section('太阳能', ['太阳能转化', '利用方式'], ['info-energy']),
     section('能源与可持续发展', ['能源危机', '环境影响', '可持续'], ['info-energy']),
   ]),
+  chapter('h1-1', 'rj-high-required-1', '高中', '必修第一册', '第一章', '运动的描述', '高中运动学', ['kinematics-graph'], [
+    section('质点、参考系和坐标系', ['理想模型', '参考系', '位置'], []),
+    section('时间和位移', ['时刻时间', '位移路程', '矢量'], ['kinematics-graph']),
+    section('位置变化快慢的描述——速度', ['平均速度', '瞬时速度', 'v-t 图像'], ['kinematics-graph']),
+    section('速度变化快慢的描述——加速度', ['加速度', '斜率', '方向'], ['kinematics-graph']),
+  ]),
+  chapter('h1-2', 'rj-high-required-1', '高中', '必修第一册', '第二章', '匀变速直线运动的研究', '高中运动学', ['kinematics-graph'], [
+    section('实验：探究小车速度随时间变化', ['打点计时器', '数据处理', '图像拟合'], ['kinematics-graph']),
+    section('匀变速直线运动规律', ['v=v0+at', 'x=v0t+1/2at²', 'v²-v0²=2ax'], ['kinematics-graph']),
+    section('自由落体运动', ['重力加速度', '竖直向下', '匀加速'], ['kinematics-graph']),
+  ]),
+  chapter('h1-3', 'rj-high-required-1', '高中', '必修第一册', '第三章', '相互作用——力', '高中力学', ['force-vector'], [
+    section('重力与弹力', ['重心', '形变', '胡克定律'], ['force-vector']),
+    section('摩擦力', ['静摩擦', '滑动摩擦', '方向判断'], ['newton-friction']),
+    section('力的合成和分解', ['平行四边形定则', '正交分解'], ['force-vector']),
+  ]),
+  chapter('h1-4', 'rj-high-required-1', '高中', '必修第一册', '第四章', '运动和力的关系', '高中力学', ['newton-friction'], [
+    section('牛顿第一定律', ['惯性', '理想实验'], ['newton-friction']),
+    section('牛顿第二定律', ['F=ma', '合力', '加速度方向'], ['newton-friction']),
+    section('牛顿第三定律', ['相互作用力', '等大反向'], ['force-vector']),
+  ]),
+  chapter('h2-1', 'rj-high-required-2', '高中', '必修第二册', '第五章', '抛体运动', '高中曲线运动', ['projectile-motion'], [
+    section('曲线运动', ['速度方向', '合力方向', '轨迹弯曲'], ['projectile-motion']),
+    section('运动的合成与分解', ['独立性', '等时性'], ['projectile-motion']),
+    section('平抛运动', ['水平匀速', '竖直自由落体'], ['projectile-motion']),
+  ]),
+  chapter('h2-2', 'rj-high-required-2', '高中', '必修第二册', '第六章', '圆周运动', '高中力学', ['circular-gravity'], [
+    section('圆周运动', ['角速度', '线速度', '周期'], ['circular-gravity']),
+    section('向心力', ['方向指向圆心', 'F=mv²/r'], ['circular-gravity']),
+    section('生活中的圆周运动', ['临界问题', '竖直平面圆周'], ['circular-gravity']),
+  ]),
+  chapter('h2-3', 'rj-high-required-2', '高中', '必修第二册', '第七章', '万有引力与宇宙航行', '高中力学', ['circular-gravity'], [
+    section('万有引力定律', ['平方反比', '引力常量'], ['circular-gravity']),
+    section('宇宙航行', ['卫星', '环绕速度', '周期'], ['circular-gravity']),
+  ]),
+  chapter('h2-4', 'rj-high-required-2', '高中', '必修第二册', '第八章', '机械能守恒定律', '高中能量', ['work-energy'], [
+    section('功和功率', ['W=Flcosθ', 'P=W/t'], ['work-energy']),
+    section('动能和动能定理', ['合力做功', '动能变化'], ['work-energy']),
+    section('机械能守恒', ['重力做功', '弹力做功', '能量转化'], ['work-energy']),
+  ]),
+  chapter('h3-1', 'rj-high-required-3', '高中', '必修第三册', '第九章', '静电场及其应用', '高中电磁学', ['electrostatic-field'], [
+    section('电荷', ['库仑定律', '电荷守恒'], ['electrostatic-field']),
+    section('电场', ['电场强度', '电场线'], ['electrostatic-field']),
+    section('电势能和电势', ['电势差', '等势面'], ['electrostatic-field']),
+  ]),
+  chapter('h3-2', 'rj-high-required-3', '高中', '必修第三册', '第十章', '静电场中的能量', '高中电磁学', ['electrostatic-field'], [
+    section('电容器', ['电容', '平行板电容器'], ['electrostatic-field']),
+    section('带电粒子在电场中的运动', ['加速', '偏转', '类平抛'], ['electrostatic-field', 'projectile-motion']),
+  ]),
+  chapter('h3-3', 'rj-high-required-3', '高中', '必修第三册', '第十一章', '电路及其应用', '高中电路', ['ohm-law'], [
+    section('电源和电流', ['恒定电流', '电动势'], ['circuit-basic']),
+    section('导体电阻', ['电阻定律', '影响因素'], ['voltage-resistance']),
+    section('闭合电路欧姆定律', ['内阻', '路端电压'], ['ohm-law']),
+  ]),
+  chapter('hs1-1', 'rj-high-selective-1', '高中', '选择性必修第一册', '第一章', '动量守恒定律', '高中力学', ['newton-friction'], [
+    section('动量', ['p=mv', '冲量', '动量定理'], ['newton-friction']),
+    section('动量守恒', ['系统', '内力外力', '碰撞'], ['newton-friction']),
+  ]),
+  chapter('hs1-2', 'rj-high-selective-1', '高中', '选择性必修第一册', '第二章', '机械振动', '高中振动波动', ['shm-wave'], [
+    section('简谐运动', ['回复力', '周期', '振幅'], ['shm-wave']),
+    section('单摆', ['周期公式', '小角度条件'], ['shm-wave']),
+  ]),
+  chapter('hs1-3', 'rj-high-selective-1', '高中', '选择性必修第一册', '第三章', '机械波', '高中振动波动', ['shm-wave'], [
+    section('波的形成', ['介质', '波速', '波长'], ['shm-wave', 'sound-wave']),
+    section('波的干涉和衍射', ['叠加', '稳定干涉', '明显衍射'], ['shm-wave']),
+  ]),
+  chapter('hs1-4', 'rj-high-selective-1', '高中', '选择性必修第一册', '第四章', '光', '高中光学', ['light-ray'], [
+    section('光的折射和全反射', ['折射率', '临界角'], ['light-ray']),
+    section('光的干涉和衍射', ['双缝干涉', '条纹间距'], ['shm-wave']),
+  ]),
+  chapter('hs2-1', 'rj-high-selective-2', '高中', '选择性必修第二册', '第一章', '安培力与洛伦兹力', '高中电磁学', ['magnetic-induction'], [
+    section('磁场和磁感线', ['磁感应强度', '方向'], ['magnetic-induction']),
+    section('安培力', ['左手定则', 'F=BIL'], ['magnetic-induction']),
+    section('洛伦兹力', ['带电粒子偏转', '圆周运动'], ['magnetic-induction', 'circular-gravity']),
+  ]),
+  chapter('hs2-2', 'rj-high-selective-2', '高中', '选择性必修第二册', '第二章', '电磁感应', '高中电磁学', ['magnetic-induction'], [
+    section('楞次定律', ['磁通量变化', '阻碍变化'], ['magnetic-induction']),
+    section('法拉第电磁感应定律', ['感应电动势', '变化率'], ['magnetic-induction']),
+  ]),
+  chapter('hs2-3', 'rj-high-selective-2', '高中', '选择性必修第二册', '第三章', '交变电流', '高中电磁学', ['magnetic-induction'], [
+    section('交变电流的产生', ['线圈转动', '正弦交流电'], ['magnetic-induction']),
+    section('变压器和远距离输电', ['匝数比', '升压降压'], ['magnetic-induction']),
+  ]),
 ]
 
 export const openAssetSources = [
@@ -555,7 +768,7 @@ function chapter(
   return {
     id,
     bookId,
-    stage: '初中',
+    stage: grade === '高中' ? '高中' : '初中',
     grade,
     volume,
     chapterNo,

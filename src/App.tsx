@@ -54,19 +54,19 @@ function App() {
   const selectedChapter = chapters.find((chapter) => chapter.id === selectedChapterId) ?? chapters[0]
   const selectedTemplate =
     modelTemplates.find((template) => template.id === selectedTemplateId) ??
-    getLessonModels(selectedChapter.sections[0]).at(0) ??
+    modelTemplates.find((template) => template.id === getFirstModelId(selectedChapter)) ??
     modelTemplates[0]
 
   function selectBook(bookId: string) {
     const firstChapter = chapters.find((chapter) => chapter.bookId === bookId) ?? chapters[0]
     setSelectedBookId(bookId)
     setSelectedChapterId(firstChapter.id)
-    setSelectedTemplateId(firstChapter.modelIds[0])
+    setSelectedTemplateId(getFirstModelId(firstChapter))
   }
 
   function selectChapter(chapter: Chapter) {
     setSelectedChapterId(chapter.id)
-    setSelectedTemplateId(chapter.modelIds[0])
+    setSelectedTemplateId(getFirstModelId(chapter))
   }
 
   return (
@@ -195,8 +195,8 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
   return (
     <section className="panel explainer-panel">
       <div className="section-title">
-        <span>通用模型讲解</span>
-        <small>平台内置讲解模板</small>
+        <span>{template.title}</span>
+        <small>交互仿真</small>
       </div>
       <div className="explainer-layout">
         <div className="explainer-preview">
@@ -227,32 +227,21 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
 
         <div className="explainer-copy">
           <p className="explainer-goal">{explainer.goal}</p>
-          <ol className="explainer-steps">
-            {explainer.steps.map((step, index) => (
-              <li key={step.time} className={index === activeStepIndex ? 'active' : ''}>
-                <time>{step.time}</time>
-                <span>{step.text}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-
-      <div className="param-panel">
-        <div className="param-title-row">
-          <h3>物理参数</h3>
-          <span>拖动后模型即时反馈</span>
-        </div>
-        <div className="lab-grid">
-          <div className="param-grid">
-            {controls.map((control) => (
-              <RangeControl
-                key={control.key}
-                control={control}
-                value={params[control.key]}
-                onChange={(value) => updateParam(control.key, value)}
-              />
-            ))}
+          <div className="param-panel compact">
+            <div className="param-title-row">
+              <h3>物理参数</h3>
+              <span>即时反馈</span>
+            </div>
+            <div className="param-grid">
+              {controls.map((control) => (
+                <RangeControl
+                  key={control.key}
+                  control={control}
+                  value={params[control.key]}
+                  onChange={(value) => updateParam(control.key, value)}
+                />
+              ))}
+            </div>
           </div>
           <div className="observation-panel">
             <h3>观测量</h3>
@@ -263,6 +252,14 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
               </div>
             ))}
           </div>
+          <ol className="explainer-steps">
+            {explainer.steps.map((step, index) => (
+              <li key={step.time} className={index === activeStepIndex ? 'active' : ''}>
+                <time>{step.time}</time>
+                <span>{step.text}</span>
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
 
@@ -325,6 +322,16 @@ function getLessonModels(lesson: { modelIds: string[] }) {
   return lesson.modelIds
     .map((id) => modelTemplates.find((template) => template.id === id))
     .filter((template): template is ModelTemplate => Boolean(template))
+}
+
+function getFirstModelId(chapter: Chapter) {
+  return (
+    chapter.sections.flatMap((section) => section.modelIds).find((id) =>
+      modelTemplates.some((template) => template.id === id),
+    ) ??
+    chapter.modelIds.find((id) => modelTemplates.some((template) => template.id === id)) ??
+    modelTemplates[0].id
+  )
 }
 
 function buildModelExplainer(template: ModelTemplate, chapter: Chapter) {
@@ -396,6 +403,29 @@ function getParamControls(template: ModelTemplate): ParamControl[] {
       { key: 'voltage', label: '电压 U', min: 1, max: 12, step: 0.5, unit: 'V' },
       { key: 'resistance', label: '电阻 R', min: 2, max: 30, step: 1, unit: 'Ω' },
       { key: 'time', label: '通电时间 t', min: 0, max: 90, step: 1, unit: 's' },
+    ],
+    'projectile-motion': [
+      { key: 'force', label: '初速度 v0', min: 20, max: 120, step: 1, unit: 'm/s' },
+      { key: 'angle', label: '抛射角', min: 0, max: 70, step: 1, unit: '°' },
+      { key: 'time', label: '运动时间', min: 0, max: 90, step: 1, unit: '%' },
+    ],
+    'circular-gravity': [
+      { key: 'height', label: '轨道半径 r', min: 25, max: 90, step: 1, unit: '%' },
+      { key: 'force', label: '线速度 v', min: 20, max: 120, step: 1, unit: '%' },
+    ],
+    'electrostatic-field': [
+      { key: 'voltage', label: '电荷量 q', min: 1, max: 12, step: 0.5, unit: '级' },
+      { key: 'height', label: '板间距 d', min: 20, max: 90, step: 1, unit: '%' },
+    ],
+    'shm-wave': [
+      { key: 'height', label: '振幅 A', min: 10, max: 90, step: 1, unit: '%' },
+      { key: 'force', label: '频率 f', min: 10, max: 120, step: 1, unit: '%' },
+      { key: 'time', label: '相位时间', min: 0, max: 90, step: 1, unit: '%' },
+    ],
+    'magnetic-induction': [
+      { key: 'voltage', label: '磁场 B', min: 1, max: 12, step: 0.5, unit: '级' },
+      { key: 'force', label: '导体速度 v', min: 10, max: 120, step: 1, unit: '%' },
+      { key: 'angle', label: '切割角度', min: 0, max: 90, step: 1, unit: '°' },
     ],
   }
   const modelControls = byId[template.id]
@@ -483,6 +513,31 @@ function getObservations(template: ModelTemplate, params: SimParams) {
       { label: '电功率 P', value: `${power.toFixed(1)} W` },
       { label: '焦耳热 Q', value: `${heat} J` },
     ],
+    'projectile-motion': [
+      { label: '水平运动', value: '匀速直线运动' },
+      { label: '竖直运动', value: '匀变速运动' },
+      { label: '共同时间', value: `${params.time}%` },
+    ],
+    'circular-gravity': [
+      { label: '速度方向', value: '沿轨道切线' },
+      { label: '合力方向', value: '指向圆心' },
+      { label: '向心关系', value: 'F=mv²/r' },
+    ],
+    'electrostatic-field': [
+      { label: '场强趋势', value: params.height < 45 ? '较强' : '较弱' },
+      { label: '正电荷受力', value: '沿电场线方向' },
+      { label: '能量判断', value: '电势能随位置变化' },
+    ],
+    'shm-wave': [
+      { label: '波速关系', value: 'v=λf' },
+      { label: '振幅', value: `${params.height}%` },
+      { label: '相位', value: `${params.time}%` },
+    ],
+    'magnetic-induction': [
+      { label: '感应条件', value: '磁通量变化' },
+      { label: '电动势趋势', value: params.force * params.voltage > 420 ? '较大' : '较小' },
+      { label: '方向判断', value: '楞次定律' },
+    ],
   }
 
   return (
@@ -518,6 +573,11 @@ function PhysicsCanvas({ template, params }: { template: ModelTemplate; params: 
   if (template.id === 'density-particle') return <DensityScene params={params} />
   if (template.id === 'buoyancy') return <BuoyancyScene params={params} />
   if (template.id === 'electric-power') return <ElectricPowerScene params={params} />
+  if (template.id === 'projectile-motion') return <ProjectileScene params={params} />
+  if (template.id === 'circular-gravity') return <CircularGravityScene params={params} />
+  if (template.id === 'electrostatic-field') return <ElectrostaticScene params={params} />
+  if (template.id === 'shm-wave') return <ShmWaveScene params={params} />
+  if (template.id === 'magnetic-induction') return <MagneticInductionScene params={params} />
   const kind = template.canvasKind
   if (kind === 'circuit') return <CircuitScene params={params} />
   if (kind === 'macroMicro') return <MacroMicroScene params={params} />
@@ -558,24 +618,170 @@ function MeasurementScene({ params }: { params: SimParams }) {
 }
 
 function SoundWaveScene({ params }: { params: SimParams }) {
-  const amplitude = params.height * 0.75
-  const frequency = Math.max(4, Math.round(params.force / 12))
-  const points = Array.from({ length: 90 }, (_, i) => {
-    const x = 86 + i * 6.3
-    const y = 214 + Math.sin(i / frequency) * amplitude
+  const amplitude = params.height * 0.5
+  const wavelength = 150 - params.force
+  const phase = params.time / 8
+  const points = Array.from({ length: 110 }, (_, i) => {
+    const x = 118 + i * 5
+    const y = 118 + Math.sin(i / Math.max(5, wavelength / 12) + phase) * amplitude
     return `${x},${y}`
   }).join(' ')
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="声波传播模型">
-        <rect x="88" y="156" width="72" height="116" rx="10" className="resistor" />
-        <path d="M160 174 C202 194 202 234 160 254" className="signal" />
-        <polyline points={points} className="graph-line" />
-        {Array.from({ length: 18 }, (_, i) => (
-          <circle key={i} cx={218 + i * 26} cy={318 + Math.sin(i + params.time / 8) * 18} r="7" className="particle" />
+        <rect x="0" y="0" width="760" height="430" className="lab-bg" />
+        <line x1="92" y1="258" x2="680" y2="258" className="axis faint" />
+        <rect x="80" y="190" width="34" height="136" rx="4" className="speaker-body" />
+        <path d="M114 214 L164 182 L164 334 L114 302 Z" className="speaker-cone" />
+        <polyline points={points} className="sound-pressure" />
+        {Array.from({ length: 36 }, (_, i) => {
+          const baseX = 190 + i * 14
+          const shift = Math.sin(i / Math.max(2.8, wavelength / 36) - phase) * (params.height / 6)
+          const density = Math.abs(Math.sin(i / Math.max(2.8, wavelength / 36) - phase))
+          return (
+            <circle
+              key={i}
+              cx={baseX + shift}
+              cy={258 + Math.sin(i * 1.7) * 34}
+              r={3 + density * 2}
+              className="air-particle"
+            />
+          )
+        })}
+        {Array.from({ length: 12 }, (_, i) => (
+          <path
+            key={i}
+            d={`M${182 + i * 42},214 C${196 + i * 42},238 ${196 + i * 42},278 ${182 + i * 42},302`}
+            className={i % 2 === 0 ? 'compression-line strong' : 'compression-line'}
+          />
         ))}
-        <text x="92" y="92" className="caption-label">频率控制音调，振幅影响响度</text>
-        <text x="520" y="370" className="label small">f={params.force}Hz</text>
+        <text x="96" y="74" className="caption-label light">纵波：空气分子只在平衡位置附近往复振动</text>
+        <text x="472" y="372" className="label small light">f={params.force}Hz，A={params.height}%</text>
+      </svg>
+    </div>
+  )
+}
+
+function ProjectileScene({ params }: { params: SimParams }) {
+  const angle = (params.angle * Math.PI) / 180
+  const speed = params.force / 7
+  const t = params.time / 18
+  const x = 104 + speed * Math.cos(angle) * t * 34
+  const y = 330 - (speed * Math.sin(angle) * t * 38 - 0.5 * 9.8 * t * t * 15)
+  const path = Array.from({ length: 36 }, (_, i) => {
+    const ti = i / 6
+    const px = 104 + speed * Math.cos(angle) * ti * 34
+    const py = 330 - (speed * Math.sin(angle) * ti * 38 - 0.5 * 9.8 * ti * ti * 15)
+    return `${Math.min(px, 690)},${Math.min(352, py)}`
+  }).join(' ')
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="平抛和斜抛运动模型">
+        <rect x="0" y="0" width="760" height="430" className="lab-bg light-bg" />
+        <line x1="84" y1="352" x2="700" y2="352" className="axis" />
+        <line x1="104" y1="70" x2="104" y2="352" className="axis" />
+        <polyline points={path} className="trajectory" />
+        <circle cx={Math.min(x, 690)} cy={Math.min(y, 352)} r="13" className="particle" />
+        <Arrow x1={Math.min(x, 690)} y1={Math.min(y, 352)} x2={Math.min(x, 690) + 82} y2={Math.min(y, 352)} color="#1f6feb" label="vx" />
+        <Arrow x1={Math.min(x, 690)} y1={Math.min(y, 352)} x2={Math.min(x, 690)} y2={Math.min(y, 352) + 74} color="#7b3ff2" label="g" />
+        <text x="360" y="70" className="caption-label">水平方向匀速，竖直方向自由落体</text>
+      </svg>
+    </div>
+  )
+}
+
+function CircularGravityScene({ params }: { params: SimParams }) {
+  const r = 70 + params.height * 1.7
+  const theta = params.time / 90 * Math.PI * 2
+  const cx = 380
+  const cy = 216
+  const x = cx + Math.cos(theta) * r
+  const y = cy + Math.sin(theta) * r
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="圆周运动和万有引力模型">
+        <rect x="0" y="0" width="760" height="430" className="lab-bg" />
+        <circle cx={cx} cy={cy} r={r} className="orbit" />
+        <circle cx={cx} cy={cy} r="30" className="star-core" />
+        <circle cx={x} cy={y} r="14" className="particle cyan" />
+        <Arrow x1={x} y1={y} x2={x - Math.sin(theta) * params.force} y2={y + Math.cos(theta) * params.force} color="#1f6feb" label="v" />
+        <Arrow x1={x} y1={y} x2={cx} y2={cy} color="#f97316" label="F向" />
+        <text x="86" y="70" className="caption-label light">速度沿切线，合力指向圆心</text>
+      </svg>
+    </div>
+  )
+}
+
+function ElectrostaticScene({ params }: { params: SimParams }) {
+  const density = Math.round(16 + params.voltage * 4)
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="静电场模型">
+        <rect x="0" y="0" width="760" height="430" className="lab-bg" />
+        {Array.from({ length: density }, (_, i) => {
+          const a = (i / density) * Math.PI * 2
+          const startX = 292 + Math.cos(a) * 34
+          const startY = 216 + Math.sin(a) * 34
+          const endX = 292 + Math.cos(a) * (112 + params.height)
+          const endY = 216 + Math.sin(a) * (112 + params.height)
+          return <line key={i} x1={startX} y1={startY} x2={endX} y2={endY} className="field-line" />
+        })}
+        {Array.from({ length: density }, (_, i) => {
+          const a = (i / density) * Math.PI * 2
+          const startX = 468 + Math.cos(a) * (112 + params.height)
+          const startY = 216 + Math.sin(a) * (112 + params.height)
+          const endX = 468 + Math.cos(a) * 34
+          const endY = 216 + Math.sin(a) * 34
+          return <line key={i} x1={startX} y1={startY} x2={endX} y2={endY} className="field-line" />
+        })}
+        <circle cx="292" cy="216" r="30" className="charge-positive" />
+        <circle cx="468" cy="216" r="30" className="charge-negative" />
+        <text x="282" y="224" className="label small light">+</text>
+        <text x="460" y="224" className="label small light">-</text>
+        <text x="84" y="70" className="caption-label light">电场线从正电荷出发，到负电荷终止</text>
+      </svg>
+    </div>
+  )
+}
+
+function ShmWaveScene({ params }: { params: SimParams }) {
+  const amp = params.height * 0.8
+  const phase = params.time / 9
+  const points = Array.from({ length: 130 }, (_, i) => {
+    const x = 80 + i * 5
+    const y = 218 + Math.sin(i / Math.max(5, 135 / params.force) - phase) * amp
+    return `${x},${y}`
+  }).join(' ')
+  const bobX = 160 + Math.sin(phase) * amp
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="机械振动与机械波模型">
+        <rect x="0" y="0" width="760" height="430" className="lab-bg light-bg" />
+        <line x1="160" y1="70" x2={bobX} y2="158" className="wire" />
+        <circle cx={bobX} cy="158" r="18" className="particle" />
+        <line x1="80" y1="218" x2="700" y2="218" className="axis faint" />
+        <polyline points={points} className="graph-line" />
+        <text x="92" y="360" className="caption-label">振幅决定偏离平衡位置的最大距离，频率决定振动快慢</text>
+      </svg>
+    </div>
+  )
+}
+
+function MagneticInductionScene({ params }: { params: SimParams }) {
+  const conductorX = 300 + params.force * 1.7
+  const fluxWidth = Math.max(24, conductorX - 202)
+  return (
+    <div className="visual-canvas">
+      <svg viewBox="0 0 760 430" role="img" aria-label="磁场与电磁感应模型">
+        <rect x="0" y="0" width="760" height="430" className="lab-bg" />
+        <rect x="202" y="112" width="350" height="204" rx="8" className="field-region" />
+        {Array.from({ length: 36 }, (_, i) => (
+          <text key={i} x={226 + (i % 9) * 36} y={146 + Math.floor(i / 9) * 42} className="field-mark">×</text>
+        ))}
+        <rect x="202" y="112" width={fluxWidth} height="204" className="flux-area" />
+        <line x1={conductorX} y1="102" x2={conductorX} y2="326" className="conductor" />
+        <Arrow x1={conductorX} y1={84} x2={conductorX + 88} y2={84} color="#1f6feb" label="v" />
+        <text x="92" y="366" className="caption-label light">导体切割磁感线，回路磁通量变化，产生感应电动势</text>
       </svg>
     </div>
   )
