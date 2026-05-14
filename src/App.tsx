@@ -52,12 +52,9 @@ function App() {
 
   const selectedBook = books.find((book) => book.id === selectedBookId) ?? books[0]
   const selectedChapter = chapters.find((chapter) => chapter.id === selectedChapterId) ?? chapters[0]
-  const recommendedModels = selectedChapter.modelIds
-    .map((id) => modelTemplates.find((template) => template.id === id))
-    .filter((template): template is ModelTemplate => Boolean(template))
   const selectedTemplate =
     modelTemplates.find((template) => template.id === selectedTemplateId) ??
-    recommendedModels[0] ??
+    getLessonModels(selectedChapter.sections[0]).at(0) ??
     modelTemplates[0]
 
   function selectBook(bookId: string) {
@@ -144,7 +141,7 @@ function App() {
         <div className="content-grid">
           <section className="panel chapter-detail">
             <div className="section-title">
-              <span>知识点编排</span>
+              <span>章节知识点与模型</span>
               <small>{selectedChapter.sections.length} 节</small>
             </div>
             <div className="lesson-list">
@@ -158,39 +155,21 @@ function App() {
                         <span key={item}>{item}</span>
                       ))}
                     </div>
+                    <div className="lesson-models">
+                      {getLessonModels(lesson).map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          className={template.id === selectedTemplate.id ? 'selected' : ''}
+                          onClick={() => setSelectedTemplateId(template.id)}
+                        >
+                          <strong>{template.title}</strong>
+                          <span>{template.level}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel template-library">
-            <div className="section-title">
-              <span>本章模型</span>
-              <small>{recommendedModels.length} 个</small>
-            </div>
-            <div className="template-grid compact">
-              {recommendedModels.map((template) => (
-                <TemplateButton
-                  key={template.id}
-                  template={template}
-                  selected={template.id === selectedTemplate.id}
-                  onClick={() => setSelectedTemplateId(template.id)}
-                />
-              ))}
-            </div>
-            <div className="section-title all-model-title">
-              <span>通用模型库</span>
-              <small>{modelTemplates.length} 个</small>
-            </div>
-            <div className="template-grid">
-              {modelTemplates.map((template) => (
-                <TemplateButton
-                  key={template.id}
-                  template={template}
-                  selected={template.id === selectedTemplate.id}
-                  onClick={() => setSelectedTemplateId(template.id)}
-                />
               ))}
             </div>
           </section>
@@ -342,27 +321,10 @@ function RangeControl({
   )
 }
 
-function TemplateButton({
-  template,
-  selected,
-  onClick,
-}: {
-  template: ModelTemplate
-  selected: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      className={`template-card ${selected ? 'selected' : ''}`}
-      onClick={onClick}
-    >
-      <span className="level">{template.level}</span>
-      <strong>{template.title}</strong>
-      <small>{template.domain}</small>
-      <p>{template.description}</p>
-    </button>
-  )
+function getLessonModels(lesson: { modelIds: string[] }) {
+  return lesson.modelIds
+    .map((id) => modelTemplates.find((template) => template.id === id))
+    .filter((template): template is ModelTemplate => Boolean(template))
 }
 
 function buildModelExplainer(template: ModelTemplate, chapter: Chapter) {
