@@ -4,6 +4,15 @@
 
 目标风格：极简、白底、几何图形、清晰受力箭头、分步动画，适合把课件或题目转成类似“物理题可视化”的讲解视频。
 
+## 当前技术栈
+
+- Next.js App Router
+- Tailwind CSS
+- Supabase client 预留
+- Stripe client 预留
+- Umami 统计脚本预留
+- Vercel 部署友好
+
 ## 当前能力
 
 - 初高中物理知识点库雏形
@@ -22,7 +31,7 @@
 
 ```bash
 npm install
-npm run dev
+npm run dev -- --hostname 127.0.0.1 --port 5174
 ```
 
 ## 构建
@@ -30,6 +39,10 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## 环境变量
+
+复制 `.env.example` 为 `.env.local`，按需填入 Supabase、Stripe、Umami 配置。
 
 ## 推荐生产流程
 

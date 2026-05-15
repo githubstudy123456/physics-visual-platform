@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useMemo, useState } from 'react'
 import { Bodies, Body, Composite, Engine } from 'matter-js'
 import {
@@ -8,7 +10,6 @@ import {
   type Chapter,
   type ModelTemplate,
 } from './data/curriculum'
-import './App.css'
 
 type SimParams = {
   time: number
