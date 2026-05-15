@@ -1279,25 +1279,37 @@ function StateChangeScene({ params }: { params: SimParams }) {
 }
 
 function DensityScene({ params }: { params: SimParams }) {
-  const particleCount = Math.round(params.density / 6)
-  const boxSize = 70 + params.height
+  const volume = 30 + params.height
+  const mass = Math.round((params.density / 100) * volume * 2.7)
+  const liquidHeight = 246 - Math.min(112, params.height * 1.15)
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="密度粒子模型">
-        <rect x="116" y="110" width={boxSize} height={boxSize} rx="8" className="jar" />
-        {Array.from({ length: particleCount }, (_, i) => (
-          <circle
-            key={i}
-            cx={136 + (i % 5) * 24}
-            cy={132 + Math.floor(i / 5) * 22}
-            r="8"
-            className="particle"
-          />
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="78" y="318" width="600" height="20" rx="10" fill="#cbd5e1" />
+
+        <line x1="198" y1="112" x2="198" y2="260" stroke="#334155" strokeWidth="5" />
+        <line x1="130" y1="260" x2="266" y2="260" stroke="#334155" strokeWidth="5" />
+        <line x1="144" y1="152" x2="252" y2="152" stroke="#334155" strokeWidth="4" />
+        <path d="M144 152 L112 230 H176 Z" fill="#ffffff" stroke="#64748b" strokeWidth="3" />
+        <path d="M252 152 L220 230 H284 Z" fill="#ffffff" stroke="#64748b" strokeWidth="3" />
+        <rect x="124" y="196" width="40" height="28" rx="4" fill="#f97316" stroke="#1f2937" strokeWidth="2" />
+        <text x="222" y="218" fill="#334155" fontSize="19" fontWeight="900">{mass}g</text>
+
+        <rect x="354" y="90" width="118" height="220" rx="18" fill="rgba(255,255,255,0.68)" stroke="#64748b" strokeWidth="4" />
+        <rect x="366" y={liquidHeight} width="94" height={300 - liquidHeight} rx="8" fill="rgba(37,99,235,0.34)" />
+        {Array.from({ length: 7 }, (_, i) => (
+          <line key={i} x1="472" y1={116 + i * 27} x2="492" y2={116 + i * 27} stroke="#64748b" strokeWidth={i % 2 === 0 ? 3 : 2} />
         ))}
-        <rect x="444" y="138" width="170" height="76" rx="8" className="energy-box" />
-        <text x="482" y="186" className="label small">ρ=m/V</text>
-        <Arrow x1={280} y1={176} x2={430} y2={176} color="#1f6feb" label="比较" />
-        <text x="102" y="306" className="caption-label">同体积下，粒子越密集，质量越大，密度越大</text>
+        <rect x="386" y={liquidHeight - 28} width="54" height="54" rx="6" fill="#f97316" stroke="#1f2937" strokeWidth="3" opacity="0.88" />
+        <text x="372" y="336" fill="#334155" fontSize="18" fontWeight="900">量筒读 V={volume.toFixed(0)}cm³</text>
+
+        <rect x="540" y="116" width="146" height="132" rx="12" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <text x="564" y="154" fill="#334155" fontSize="20" fontWeight="900">ρ = m / V</text>
+        <text x="564" y="196" fill="#1d4ed8" fontSize="26" fontWeight="900">{(mass / volume).toFixed(2)}</text>
+        <text x="618" y="196" fill="#475569" fontSize="16" fontWeight="800">g/cm³</text>
+        <text x="112" y="382" fill="#334155" fontSize="17" fontWeight="800">测密度的核心是：天平测质量，量筒测体积，再比较同体积质量。</text>
       </svg>
     </div>
   )
@@ -1424,18 +1436,26 @@ function InclineScene({ params }: { params: SimParams }) {
 
 function ForceScene({ params }: { params: SimParams }) {
   const rad = (params.angle * Math.PI) / 180
-  const x2 = 376 + params.force * 1.5 * Math.cos(rad)
-  const y2 = 209 - params.force * 1.5 * Math.sin(rad)
+  const x2 = 356 + params.force * 1.28 * Math.cos(rad)
+  const y2 = 214 - params.force * 1.28 * Math.sin(rad)
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="力的三要素模型">
-        <rect x="320" y="172" width="112" height="74" rx="8" className="block blue" />
-        <circle cx="376" cy="209" r="7" className="node red-node" />
-        <Arrow x1={376} y1={209} x2={x2} y2={y2} color="#1f6feb" label={`F=${params.force}N`} />
-        <Arrow x1={376} y1={209} x2={376} y2={322} color="#7b3ff2" label="G" />
-        <Arrow x1={376} y1={246} x2={376} y2={135} color="#16a34a" label="N" />
-        <text x="250" y="86" className="caption-label">大小、方向、作用点决定力的作用效果</text>
-        <line x1="120" y1="246" x2="650" y2="246" className="axis" />
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="92" y="286" width="586" height="28" rx="14" fill="#cbd5e1" />
+        <rect x="286" y="194" width="140" height="92" rx="10" fill="#2563eb" stroke="#1f2937" strokeWidth="4" />
+        <circle cx="356" cy="214" r="8" fill="#ef4444" />
+        <Arrow x1={356} y1={214} x2={x2} y2={y2} color="#1f6feb" label={`F=${params.force}N`} />
+        <Arrow x1={356} y1={286} x2={356} y2={352} color="#7b3ff2" label="G" />
+        <Arrow x1={356} y1={286} x2={356} y2={136} color="#16a34a" label="N" />
+        <line x1="426" y1="214" x2="520" y2="214" stroke="#334155" strokeWidth="5" />
+        <rect x="520" y="184" width="100" height="60" rx="12" fill="#ffffff" stroke="#334155" strokeWidth="3" />
+        <line x1="544" y1="214" x2="596" y2="214" stroke="#94a3b8" strokeWidth="3" />
+        <circle cx={544 + params.force * 0.36} cy="214" r="8" fill="#ef4444" />
+        <text x="536" y="172" fill="#334155" fontSize="16" fontWeight="900">弹簧测力计</text>
+        <rect x="108" y="84" width="204" height="88" rx="10" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <text x="130" y="120" fill="#334155" fontSize="18" fontWeight="900">力的三要素</text>
+        <text x="130" y="150" fill="#475569" fontSize="15" fontWeight="800">大小、方向、作用点</text>
       </svg>
     </div>
   )
@@ -1469,26 +1489,34 @@ function CircuitScene({ params }: { params: SimParams }) {
 
 function MacroMicroScene({ params }: { params: SimParams }) {
   const particleCount = Math.round(4 + params.density / 10)
-  const spread = 26 + params.temperature * 0.45 + params.time * 0.15
+  const spread = 24 + params.temperature * 0.38 + params.time * 0.12
+  const progress = Math.min(1, params.time / modelDurationSeconds)
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="宏观到微观模型">
-        <rect x="110" y="82" width="170" height="250" rx="20" className="jar" />
-        <rect x="118" y="180" width="154" height="140" rx="8" className="water" />
-        <path d="M 166 176 C 188 216 148 240 184 286 C 220 236 196 210 230 176" className="ink" />
-        <circle cx="410" cy="210" r="116" className="lens" />
-        <line x1="490" y1="292" x2="584" y2="360" className="lens-handle" />
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="104" y="80" width="184" height="258" rx="22" fill="rgba(255,255,255,0.66)" stroke="#64748b" strokeWidth="4" />
+        <rect x="116" y="184" width="160" height="142" rx="10" fill="rgba(125,211,252,0.42)" />
+        <path
+          d={`M176 184 C${190 + progress * 48} 220 ${132 + progress * 28} 252 ${194 + progress * 34} 304 C${238 + progress * 26} 254 ${222 + progress * 52} 214 244 184`}
+          fill="rgba(126,34,206,0.48)"
+        />
+        <line x1="194" y1="66" x2="194" y2="184" stroke="#334155" strokeWidth="5" />
+        <path d="M184 184 C190 194 198 194 204 184 C200 170 188 170 184 184" fill="#7e22ce" />
+        <circle cx="454" cy="202" r="124" fill="rgba(255,255,255,0.72)" stroke="#2563eb" strokeWidth="4" />
+        <line x1="542" y1="290" x2="626" y2="362" stroke="#2563eb" strokeWidth="10" strokeLinecap="round" />
         {Array.from({ length: particleCount }, (_, i) => (
           <circle
             key={i}
-            cx={360 + (i % 4) * spread}
-            cy={154 + Math.floor(i / 4) * 42 + ((params.time + i * 7) % 16)}
-            r="12"
-            className="particle"
+            cx={374 + (i % 5) * spread + Math.sin(params.time / 7 + i) * 8}
+            cy={142 + Math.floor(i / 5) * 34 + Math.cos(params.time / 9 + i) * 8}
+            r="8"
+            fill={i % 3 === 0 ? '#7e22ce' : '#2563eb'}
+            opacity="0.82"
           />
         ))}
-        <path d="M 350 190 L 420 160 L 500 205" className="particle-path" />
-        <text x="252" y="64" className="caption-label">T={params.temperature}℃，扩散随时间推进</text>
+        <text x="356" y="78" fill="#334155" fontSize="18" fontWeight="900">放大后看到粒子无规则运动</text>
+        <text x="112" y="376" fill="#334155" fontSize="17" fontWeight="800">墨水由浓处向周围扩散，温度越高扩散越快。</text>
       </svg>
     </div>
   )
@@ -1562,18 +1590,30 @@ function OpticsScene({ params }: { params: SimParams }) {
 
 function FluidScene({ params }: { params: SimParams }) {
   const waterTop = 330 - params.height * 1.8
-  const pressureY = 330 - params.height * 1.2
+  const holeDepth = [34, 78, 122]
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="流体压强和浮力模型">
-        <rect x="160" y="90" width="230" height="260" rx="18" className="jar" />
-        <rect x="170" y={waterTop} width="210" height={340 - waterTop} rx="8" className="water" />
-        <rect x="260" y="210" width="70" height="70" rx="8" className="block blue" />
-        <Arrow x1={295} y1={280} x2={295} y2={340} color="#7b3ff2" label="G" />
-        <Arrow x1={295} y1={210} x2={295} y2={138} color="#16a34a" label="F浮" />
-        <line x1="470" y1="120" x2="470" y2="340" className="axis" />
-        <line x1="470" y1={pressureY} x2={560 + params.density * 0.55} y2={pressureY} className="pressure-line" />
-        <text x="498" y="246" className="caption-label">p=ρgh，h={params.height}cm</text>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="132" y="82" width="220" height="272" rx="18" fill="rgba(255,255,255,0.68)" stroke="#64748b" strokeWidth="4" />
+        <rect x="144" y={waterTop} width="196" height={340 - waterTop} rx="10" fill="rgba(37,99,235,0.34)" />
+        <path d={`M144 ${waterTop} C184 ${waterTop - 10} 222 ${waterTop + 10} 260 ${waterTop} C294 ${waterTop - 8} 318 ${waterTop + 8} 340 ${waterTop}`} fill="none" stroke="#0284c7" strokeWidth="3" opacity="0.62" />
+        {holeDepth.map((depth, i) => {
+          const y = waterTop + depth
+          const jet = Math.max(0, (340 - y) * params.density * 0.008)
+          return (
+            <g key={depth}>
+              <circle cx="352" cy={y} r="5" fill="#0f172a" />
+              <path d={`M356 ${y} C${400 + jet} ${y + 8} ${430 + jet * 1.4} ${y + 26} ${462 + jet * 1.8} ${y + 46}`} fill="none" stroke="#2563eb" strokeWidth={3 + i} strokeLinecap="round" opacity="0.75" />
+            </g>
+          )
+        })}
+        <rect x="486" y="116" width="146" height="178" rx="12" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <line x1="522" y1="252" x2="522" y2="152" stroke="#334155" strokeWidth="5" />
+        <line x1="594" y1="252" x2="594" y2={252 - params.height} stroke="#2563eb" strokeWidth="12" strokeLinecap="round" />
+        <line x1="522" y1="252" x2="594" y2="252" stroke="#334155" strokeWidth="5" />
+        <text x="500" y="326" fill="#334155" fontSize="18" fontWeight="900">p=ρgh</text>
+        <text x="500" y="354" fill="#475569" fontSize="15" fontWeight="800">越深，水柱压强越大，喷得越远</text>
       </svg>
     </div>
   )
