@@ -571,17 +571,19 @@ function getParamControls(template: ModelTemplate): ParamControl[] {
 
 function getObservations(template: ModelTemplate, params: SimParams) {
   const current = params.voltage / params.resistance
-  const speed = params.force
-  const distance = Math.round((speed * params.time) / 100)
+  const speed = params.force / 10
+  const distance = params.height
+  const travelTime = distance / speed
+  const elapsedTime = travelTime * (params.time / modelDurationSeconds)
   const power = params.voltage * current
   const heat = Math.round(current * current * params.resistance * params.time)
   const phase = params.temperature < 0 ? '固态' : params.temperature < 100 ? '液态' : '气态'
 
   const byId: Partial<Record<string, { label: string; value: string }[]>> = {
     'measurement-scale': [
-      { label: '路程估计', value: `${distance} cm` },
-      { label: '平均速度', value: `${speed} cm/s` },
-      { label: '读数提醒', value: '估读到分度值下一位' },
+      { label: '总路程 s', value: `${distance.toFixed(0)} cm` },
+      { label: '秒表读数 t', value: `${elapsedTime.toFixed(1)} s / ${travelTime.toFixed(1)} s` },
+      { label: '平均速度 v', value: `${speed.toFixed(1)} cm/s` },
     ],
     'kinematics-graph': [
       { label: '速度关系', value: 'v=v0+at' },
@@ -758,26 +760,100 @@ function PhysicsCanvas({ template, params }: { template: ModelTemplate; params: 
 }
 
 function MeasurementScene({ params }: { params: SimParams }) {
-  const carX = 118 + params.height * 4.8
-  const graphY = 318 - params.force * 1.7
+  const progress = Math.min(1, params.time / modelDurationSeconds)
+  const distanceCm = params.height
+  const speedCmS = params.force / 10
+  const totalTime = distanceCm / speedCmS
+  const elapsedTime = totalTime * progress
+  const start = { x: 132, y: 296 }
+  const end = { x: 462, y: 206 }
+  const carX = start.x + (end.x - start.x) * progress
+  const carY = start.y + (end.y - start.y) * progress
+  const stopwatchAngle = -110 + progress * 260
+  const needleAngle = (stopwatchAngle * Math.PI) / 180
+  const needleX = 598 + Math.cos(needleAngle) * 46
+  const needleY = 132 + Math.sin(needleAngle) * 46
+  const graphX = 536 + progress * 144
+  const graphY = 324 - progress * 104
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="平均速度测量模型">
-        <line x1="88" y1="292" x2="454" y2="292" className="axis" />
-        <line x1="88" y1="326" x2="454" y2="326" className="axis" />
-        {Array.from({ length: 9 }, (_, i) => (
-          <line key={i} x1={104 + i * 40} y1="292" x2={104 + i * 40} y2="326" className="normal" />
-        ))}
-        <rect x={carX} y="248" width="82" height="42" rx="8" className="cart" />
-        <circle cx={carX + 18} cy="294" r="10" className="meter" />
-        <circle cx={carX + 62} cy="294" r="10" className="meter" />
-        <text x="92" y="356" className="caption-label">刻度尺读路程 s，秒表读时间 t</text>
-        <circle cx="588" cy="172" r="62" className="meter" />
-        <line x1="588" y1="172" x2={588 + params.time * 0.75} y2={172 - params.time * 0.35} className="signal" />
-        <text x="554" y="178" className="label small">t</text>
-        <line x1="510" y1="334" x2="690" y2="334" className="axis" />
-        <line x1="530" y1="354" x2="530" y2="180" className="axis" />
-        <polyline points={`530,334 618,${graphY} 690,${Math.max(92, graphY - 36)}`} className="graph-line" />
+        <defs>
+          <linearGradient id="bench" x1="0" x2="1">
+            <stop offset="0%" stopColor="#9a6a3a" />
+            <stop offset="100%" stopColor="#d7a866" />
+          </linearGradient>
+          <linearGradient id="metal" x1="0" x2="1">
+            <stop offset="0%" stopColor="#f8fafc" />
+            <stop offset="100%" stopColor="#cbd5e1" />
+          </linearGradient>
+          <linearGradient id="cartPaint" x1="0" x2="1">
+            <stop offset="0%" stopColor="#c96b32" />
+            <stop offset="100%" stopColor="#f0a05c" />
+          </linearGradient>
+        </defs>
+
+        <rect x="0" y="0" width="760" height="430" fill="#eef6fb" />
+        <rect x="58" y="332" width="452" height="34" rx="6" fill="url(#bench)" />
+        <line x1="104" y1="316" x2="506" y2="206" stroke="#5b6470" strokeWidth="10" strokeLinecap="round" />
+        <line x1="104" y1="316" x2="506" y2="206" stroke="#dbe4ee" strokeWidth="5" strokeLinecap="round" />
+        <line x1="96" y1="348" x2="514" y2="234" stroke="#2f3b4a" strokeWidth="4" />
+        <text x="104" y="392" className="label small">斜面小车测平均速度</text>
+
+        {Array.from({ length: 11 }, (_, i) => {
+          const tickProgress = i / 10
+          const x = start.x + (end.x - start.x) * tickProgress
+          const y = start.y + (end.y - start.y) * tickProgress
+          return (
+            <g key={i}>
+              <line x1={x} y1={y + 12} x2={x + 10} y2={y + 48} stroke="#475569" strokeWidth={i % 5 === 0 ? 3 : 2} />
+              <text x={x - 8} y={y + 66} fill="#475569" fontSize="13" fontWeight="700">
+                {Math.round(distanceCm * tickProgress)}
+              </text>
+            </g>
+          )
+        })}
+
+        <rect x="456" y="196" width="40" height="64" rx="5" fill="#f8fafc" stroke="#334155" strokeWidth="3" />
+        <text x="446" y="188" fill="#334155" fontSize="15" fontWeight="800">金属片</text>
+        <line x1="126" y1="316" x2={carX + 34} y2={carY + 31} stroke="#2563eb" strokeWidth="4" strokeDasharray="8 8" />
+        <text x="222" y="282" fill="#1d4ed8" fontSize="17" fontWeight="800">s={distanceCm.toFixed(0)}cm</text>
+
+        <g transform={`translate(${carX} ${carY}) rotate(-15)`}>
+          <rect x="-4" y="-36" width="88" height="42" rx="8" fill="url(#cartPaint)" stroke="#1f2937" strokeWidth="3" />
+          <rect x="12" y="-50" width="38" height="14" rx="4" fill="#f6c58f" stroke="#1f2937" strokeWidth="2" />
+          <circle cx="16" cy="10" r="12" fill="#e2e8f0" stroke="#1f2937" strokeWidth="4" />
+          <circle cx="66" cy="10" r="12" fill="#e2e8f0" stroke="#1f2937" strokeWidth="4" />
+        </g>
+
+        <g>
+          <rect x="548" y="42" width="100" height="24" rx="7" fill="url(#metal)" stroke="#334155" strokeWidth="3" />
+          <circle cx="598" cy="132" r="68" fill="#f8fafc" stroke="#1e293b" strokeWidth="5" />
+          <circle cx="598" cy="132" r="52" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+          {Array.from({ length: 12 }, (_, i) => {
+            const angle = ((i * 30 - 90) * Math.PI) / 180
+            const x1 = 598 + Math.cos(angle) * 44
+            const y1 = 132 + Math.sin(angle) * 44
+            const x2 = 598 + Math.cos(angle) * 52
+            const y2 = 132 + Math.sin(angle) * 52
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#334155" strokeWidth="2" />
+          })}
+          <line x1="598" y1="132" x2={needleX} y2={needleY} stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="598" cy="132" r="6" fill="#2563eb" />
+          <text x="568" y="142" fill="#0f172a" fontSize="20" fontWeight="900">t</text>
+          <text x="552" y="222" fill="#1e293b" fontSize="18" fontWeight="800">{elapsedTime.toFixed(1)}s</text>
+        </g>
+
+        <g>
+          <rect x="524" y="260" width="180" height="116" rx="8" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+          <line x1="536" y1="324" x2="682" y2="324" stroke="#475569" strokeWidth="3" />
+          <line x1="536" y1="324" x2="536" y2="280" stroke="#475569" strokeWidth="3" />
+          <polyline points={`536,324 ${graphX},${graphY}`} fill="none" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+          <circle cx={graphX} cy={graphY} r="6" fill="#2563eb" />
+          <text x="542" y="278" fill="#334155" fontSize="15" fontWeight="800">s-t 图像</text>
+          <text x="576" y="356" fill="#1e293b" fontSize="15" fontWeight="800">v=s/t={speedCmS.toFixed(1)}cm/s</text>
+        </g>
       </svg>
     </div>
   )
