@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bodies, Body, Composite, Engine } from 'matter-js'
 import {
   books,
@@ -30,8 +30,10 @@ type ParamControl = {
   unit: string
 }
 
+const modelDurationSeconds = 90
+
 const defaultParams: SimParams = {
-  time: 32,
+  time: 0,
   angle: 30,
   force: 60,
   voltage: 6,
@@ -212,13 +214,55 @@ function App() {
 
 function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapter: Chapter }) {
   const [params, setParams] = useState<SimParams>(defaultParams)
+  const [isPlaying, setIsPlaying] = useState(false)
   const explainer = buildModelExplainer(template, chapter)
   const activeStepIndex = getActiveStepIndex(params.time, explainer.steps)
   const controls = getParamControls(template)
   const observations = getObservations(template, params)
 
+  useEffect(() => {
+    if (!isPlaying) {
+      return undefined
+    }
+
+    if (params.time >= modelDurationSeconds) {
+      const stopTimer = window.setTimeout(() => setIsPlaying(false), 0)
+      return () => window.clearTimeout(stopTimer)
+    }
+
+    const timer = window.setTimeout(() => {
+      setParams((current) => {
+        return { ...current, time: Math.min(modelDurationSeconds, current.time + 1) }
+      })
+    }, 260)
+
+    return () => window.clearTimeout(timer)
+  }, [isPlaying, params.time])
+
   function updateParam(key: keyof SimParams, value: number) {
+    if (key === 'time') {
+      setIsPlaying(false)
+    }
     setParams((current) => ({ ...current, [key]: value }))
+  }
+
+  function togglePlayback() {
+    setIsPlaying((current) => {
+      if (!current && params.time >= modelDurationSeconds) {
+        setParams((state) => ({ ...state, time: 0 }))
+      }
+      return !current
+    })
+  }
+
+  function resetPlayback() {
+    setIsPlaying(false)
+    setParams((current) => ({ ...current, time: 0 }))
+  }
+
+  function stepForward() {
+    setIsPlaying(false)
+    setParams((current) => ({ ...current, time: Math.min(modelDurationSeconds, current.time + 5) }))
   }
 
   return (
@@ -231,10 +275,27 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
         <div className="explainer-preview">
           <div className="preview-toolbar">
             <strong>{template.title}</strong>
-            <span>{formatSeconds(params.time)} / 01:30</span>
+            <div>
+              <span className={isPlaying ? 'play-state active' : 'play-state'}>
+                {isPlaying ? '播放中' : '暂停'}
+              </span>
+              <span>{formatSeconds(params.time)} / 01:30</span>
+            </div>
           </div>
           <PhysicsCanvas template={template} params={params} />
           <div className="timeline-control">
+            <div className="playback-row">
+              <button type="button" className="play-button" onClick={togglePlayback}>
+                {isPlaying ? '暂停' : '播放'}
+              </button>
+              <button type="button" className="ghost-button" onClick={resetPlayback}>
+                重置
+              </button>
+              <button type="button" className="ghost-button" onClick={stepForward}>
+                快进 5 秒
+              </button>
+              <span className="playback-status">{isPlaying ? '自动演示中' : '可拖动时间轴'}</span>
+            </div>
             <label htmlFor="model-time">
               <span>时间轴</span>
               <strong>{formatSeconds(params.time)}</strong>
@@ -243,13 +304,13 @@ function ModelExplainer({ template, chapter }: { template: ModelTemplate; chapte
               id="model-time"
               type="range"
               min="0"
-              max="90"
+              max={modelDurationSeconds}
               step="1"
               value={params.time}
               onChange={(event) => updateParam('time', Number(event.target.value))}
             />
             <div className="timeline-progress" aria-hidden="true">
-              <span style={{ width: `${(params.time / 90) * 100}%` }} />
+              <span style={{ width: `${(params.time / modelDurationSeconds) * 100}%` }} />
             </div>
           </div>
         </div>
