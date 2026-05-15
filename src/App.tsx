@@ -894,45 +894,77 @@ function KinematicsScene({ params }: { params: SimParams }) {
 }
 
 function SoundWaveScene({ params }: { params: SimParams }) {
-  const amplitude = params.height * 0.5
-  const wavelength = 150 - params.force
+  const amplitude = 12 + params.height * 0.34
+  const wavelength = Math.max(56, 168 - params.force)
   const phase = params.time / 8
-  const points = Array.from({ length: 110 }, (_, i) => {
-    const x = 118 + i * 5
-    const y = 118 + Math.sin(i / Math.max(5, wavelength / 12) + phase) * amplitude
+  const wavePoints = Array.from({ length: 128 }, (_, i) => {
+    const x = 118 + i * 4.4
+    const y = 92 + Math.sin(i / Math.max(5, wavelength / 12) - phase) * amplitude
     return `${x},${y}`
   }).join(' ')
+  const scopePoints = Array.from({ length: 128 }, (_, i) => {
+    const x = 118 + i * 4.4
+    const y = 346 + Math.sin(i / Math.max(5, wavelength / 12) - phase) * amplitude * 0.7
+    return `${x},${y}`
+  }).join(' ')
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="声波传播模型">
-        <rect x="0" y="0" width="760" height="430" className="lab-bg" />
-        <line x1="92" y1="258" x2="680" y2="258" className="axis faint" />
-        <rect x="80" y="190" width="34" height="136" rx="4" className="speaker-body" />
-        <path d="M114 214 L164 182 L164 334 L114 302 Z" className="speaker-cone" />
-        <polyline points={points} className="sound-pressure" />
-        {Array.from({ length: 36 }, (_, i) => {
-          const baseX = 190 + i * 14
-          const shift = Math.sin(i / Math.max(2.8, wavelength / 36) - phase) * (params.height / 6)
-          const density = Math.abs(Math.sin(i / Math.max(2.8, wavelength / 36) - phase))
+        <defs>
+          <linearGradient id="soundPanel" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#101827" />
+            <stop offset="100%" stopColor="#05070a" />
+          </linearGradient>
+          <radialGradient id="speakerGlow" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="url(#soundPanel)" />
+        <rect x="72" y="52" width="620" height="322" rx="14" fill="#0b1220" stroke="#334155" strokeWidth="2" />
+        <rect x="102" y="278" width="572" height="84" rx="8" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2" />
+        <line x1="112" y1="346" x2="662" y2="346" stroke="#94a3b8" strokeWidth="2" />
+        <polyline points={scopePoints} fill="none" stroke="#2563eb" strokeWidth="4" />
+
+        <circle cx="116" cy="206" r={58 + params.height * 0.18} fill="url(#speakerGlow)" />
+        <rect x="76" y="148" width="38" height="116" rx="6" fill="#111827" stroke="#cbd5e1" strokeWidth="3" />
+        <path d="M114 174 L164 144 L164 268 L114 238 Z" fill="#475569" stroke="#e5e7eb" strokeWidth="3" />
+        <circle cx="154" cy="206" r="34" fill="#1e293b" stroke="#94a3b8" strokeWidth="3" />
+        <circle cx="154" cy="206" r={12 + params.height * 0.08} fill="#38bdf8" opacity="0.45" />
+
+        {Array.from({ length: 15 }, (_, i) => (
+          <path
+            key={i}
+            d={`M${186 + i * 34},126 C${204 + i * 34},160 ${204 + i * 34},252 ${186 + i * 34},286`}
+            fill="none"
+            stroke={i % 2 === 0 ? 'rgba(56,189,248,0.42)' : 'rgba(148,163,184,0.22)'}
+            strokeWidth={i % 2 === 0 ? 3 : 2}
+          />
+        ))}
+
+        {Array.from({ length: 86 }, (_, i) => {
+          const row = i % 5
+          const column = Math.floor(i / 5)
+          const baseX = 196 + column * 28
+          const localPhase = column / Math.max(2.2, wavelength / 38) - phase
+          const shift = Math.sin(localPhase) * (params.height / 5)
+          const density = Math.max(0.35, Math.abs(Math.cos(localPhase)))
           return (
             <circle
               key={i}
               cx={baseX + shift}
-              cy={258 + Math.sin(i * 1.7) * 34}
-              r={3 + density * 2}
-              className="air-particle"
+              cy={160 + row * 24 + Math.sin(i * 0.9) * 4}
+              r={2.4 + density * 2.4}
+              fill={density > 0.72 ? '#e0f2fe' : '#94a3b8'}
+              opacity={0.45 + density * 0.42}
             />
           )
         })}
-        {Array.from({ length: 12 }, (_, i) => (
-          <path
-            key={i}
-            d={`M${182 + i * 42},214 C${196 + i * 42},238 ${196 + i * 42},278 ${182 + i * 42},302`}
-            className={i % 2 === 0 ? 'compression-line strong' : 'compression-line'}
-          />
-        ))}
-        <text x="96" y="74" className="caption-label light">纵波：空气分子只在平衡位置附近往复振动</text>
-        <text x="472" y="372" className="label small light">f={params.force}Hz，A={params.height}%</text>
+        <polyline points={wavePoints} fill="none" stroke="#38bdf8" strokeWidth="3" opacity="0.9" />
+        <text x="104" y="84" fill="#e5edf7" fontSize="18" fontWeight="800">声源振动 → 空气疏密相间传播</text>
+        <text x="516" y="336" fill="#334155" fontSize="15" fontWeight="800">示波器波形</text>
+        <text x="498" y="396" fill="#e5edf7" fontSize="18" fontWeight="800">f={params.force}Hz  A={params.height}%</text>
       </svg>
     </div>
   )
@@ -981,40 +1013,77 @@ function CircularGravityScene({ params }: { params: SimParams }) {
 }
 
 function ElectrostaticScene({ params }: { params: SimParams }) {
-  const density = Math.round(16 + params.voltage * 4)
-  const testX = 150 + params.time * 5
-  const testY = 300 - Math.sin(params.time / 18) * params.height
+  const fieldCount = Math.round(7 + params.voltage * 1.2)
+  const testProgress = Math.min(1, params.time / modelDurationSeconds)
+  const testX = 150 + testProgress * 460
+  const testY = 300 - Math.sin(testProgress * Math.PI) * (40 + params.height * 0.7)
+  const positive = { x: 248, y: 216 }
+  const negative = { x: 512, y: 216 }
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="静电场模型">
-        <rect x="0" y="0" width="760" height="430" className="lab-bg" />
-        {Array.from({ length: density }, (_, i) => {
-          const a = (i / density) * Math.PI * 2
-          const startX = 292 + Math.cos(a) * 34
-          const startY = 216 + Math.sin(a) * 34
-          const endX = 292 + Math.cos(a) * (112 + params.height)
-          const endY = 216 + Math.sin(a) * (112 + params.height)
-          return <line key={i} x1={startX} y1={startY} x2={endX} y2={endY} className="field-line" />
+        <defs>
+          <radialGradient id="positiveGlow" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stopColor="#fb7185" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#fb7185" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="negativeGlow" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="#05070a" />
+        <rect x="72" y="52" width="616" height="322" rx="16" fill="#0b1020" stroke="#1f2937" strokeWidth="2" />
+        {Array.from({ length: 80 }, (_, i) => (
+          <circle key={i} cx={84 + ((i * 67) % 604)} cy={64 + ((i * 43) % 298)} r={i % 4 === 0 ? 1.8 : 1.1} fill="#f8fafc" opacity="0.34" />
+        ))}
+        {Array.from({ length: fieldCount }, (_, i) => {
+          const offset = (i - (fieldCount - 1) / 2) * 18
+          const curve = Math.abs(offset) * 0.72 + 56
+          return (
+            <path
+              key={i}
+              d={`M${positive.x + 34},${positive.y + offset * 0.55} C${330},${positive.y - curve} ${430},${negative.y - curve} ${negative.x - 34},${negative.y + offset * 0.55}`}
+              fill="none"
+              stroke="#dbeafe"
+              strokeWidth="1.6"
+              opacity={0.22 + params.voltage * 0.035}
+            />
+          )
         })}
-        {Array.from({ length: density }, (_, i) => {
-          const a = (i / density) * Math.PI * 2
-          const startX = 468 + Math.cos(a) * (112 + params.height)
-          const startY = 216 + Math.sin(a) * (112 + params.height)
-          const endX = 468 + Math.cos(a) * 34
-          const endY = 216 + Math.sin(a) * 34
-          return <line key={i} x1={startX} y1={startY} x2={endX} y2={endY} className="field-line" />
+        {Array.from({ length: fieldCount }, (_, i) => {
+          const offset = (i - (fieldCount - 1) / 2) * 18
+          const curve = Math.abs(offset) * 0.72 + 56
+          return (
+            <path
+              key={i}
+              d={`M${positive.x + 34},${positive.y + offset * 0.55} C${330},${positive.y + curve} ${430},${negative.y + curve} ${negative.x - 34},${negative.y + offset * 0.55}`}
+              fill="none"
+              stroke="#dbeafe"
+              strokeWidth="1.6"
+              opacity={0.22 + params.voltage * 0.035}
+            />
+          )
         })}
-        <circle cx="292" cy="216" r="30" className="charge-positive" />
-        <circle cx="468" cy="216" r="30" className="charge-negative" />
-        <text x="282" y="224" className="label small light">+</text>
-        <text x="460" y="224" className="label small light">-</text>
+        <circle cx={positive.x} cy={positive.y} r="74" fill="url(#positiveGlow)" />
+        <circle cx={negative.x} cy={negative.y} r="74" fill="url(#negativeGlow)" />
+        <circle cx={positive.x} cy={positive.y} r="30" fill="#e11d48" stroke="#fecdd3" strokeWidth="3" />
+        <circle cx={negative.x} cy={negative.y} r="30" fill="#0891b2" stroke="#cffafe" strokeWidth="3" />
+        <text x={positive.x - 8} y={positive.y + 9} className="label small light">+</text>
+        <text x={negative.x - 7} y={negative.y + 7} className="label small light">-</text>
         <path
-          d={`M150 300 C250 ${240 - params.height} 374 ${366 - params.height} 610 160`}
-          className="test-charge-path"
+          d={`M150 300 C250 ${260 - params.height} 410 ${356 - params.height} 610 170`}
+          fill="none"
+          stroke="#f8fafc"
+          strokeWidth="2"
+          strokeDasharray="8 8"
+          opacity="0.45"
         />
-        <circle cx={Math.min(610, testX)} cy={testY} r="10" className="test-charge" />
-        <Arrow x1={Math.min(610, testX)} y1={testY} x2={Math.min(610, testX) + 60} y2={testY - 20} color="#f8fafc" label="F" />
-        <text x="84" y="70" className="caption-label light">电场线从正电荷出发，到负电荷终止</text>
+        <circle cx={testX} cy={testY} r="12" fill="#f8fafc" stroke="#38bdf8" strokeWidth="3" />
+        <Arrow x1={testX} y1={testY} x2={testX + 54} y2={testY - 18} color="#f8fafc" label="F" />
+        <rect x="96" y="322" width="220" height="34" rx="8" fill="rgba(15,23,42,0.78)" stroke="#334155" />
+        <text x="112" y="344" fill="#e5edf7" fontSize="17" fontWeight="800">场线密处场强大，正试探电荷沿 F 运动</text>
       </svg>
     </div>
   )
@@ -1110,21 +1179,57 @@ function DensityScene({ params }: { params: SimParams }) {
 }
 
 function BuoyancyScene({ params }: { params: SimParams }) {
-  const waterTop = 300 - params.height * 1.7
-  const blockY = 146 + (90 - params.height) * 1.25
-  const buoyancy = Math.round(params.height * params.density / 100)
+  const immersion = Math.min(1, params.height / 90)
+  const fluidDensity = params.density / 100
+  const waterTop = 176
+  const blockTop = 116 + immersion * 104
+  const blockBottom = blockTop + 82
+  const submerged = Math.max(0, blockBottom - waterTop)
+  const displacedHeight = Math.min(82, submerged)
+  const buoyancy = displacedHeight * fluidDensity
+  const springLength = 58 + Math.max(0, 54 - buoyancy * 0.46)
+  const reading = Math.max(0.4, 6.2 - buoyancy * 0.055)
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="浮力模型">
-        <rect x="146" y="80" width="250" height="282" rx="18" className="jar" />
-        <rect x="156" y={waterTop} width="230" height={352 - waterTop} rx="8" className="water" />
-        <rect x="242" y={blockY} width="72" height="72" rx="8" className="block blue" />
-        <Arrow x1={278} y1={blockY} x2={278} y2={blockY - buoyancy} color="#16a34a" label="F浮" />
-        <Arrow x1={278} y1={blockY + 72} x2={278} y2={blockY + 142} color="#7b3ff2" label="G" />
-        <rect x="480" y="112" width="150" height="44" rx="8" className="energy-box" />
-        <rect x="480" y="186" width={80 + buoyancy} height="32" rx="8" className="efficiency-fill" />
-        <text x="498" y="144" className="label small">F浮=G排</text>
-        <text x="470" y="268" className="caption-label">浸入越多，排开液体越多</text>
+        <defs>
+          <linearGradient id="beakerGlass" x1="0" x2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.72" />
+            <stop offset="55%" stopColor="#dbeafe" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.64" />
+          </linearGradient>
+          <linearGradient id="waterFill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.62" />
+            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.36" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="70" y="352" width="620" height="18" rx="9" fill="#d1d5db" />
+        <line x1="270" y1="52" x2="270" y2={springLength} stroke="#334155" strokeWidth="4" />
+        {Array.from({ length: 9 }, (_, i) => (
+          <path key={i} d={`M258 ${springLength + i * 8} C270 ${springLength + 4 + i * 8} 270 ${springLength + 4 + i * 8} 282 ${springLength + 8 + i * 8}`} fill="none" stroke="#64748b" strokeWidth="2" />
+        ))}
+        <line x1="270" y1={springLength + 76} x2="270" y2={blockTop} stroke="#334155" strokeWidth="3" />
+
+        <rect x="126" y="92" width="288" height="264" rx="18" fill="url(#beakerGlass)" stroke="#64748b" strokeWidth="4" />
+        <rect x="138" y={waterTop} width="264" height="168" rx="8" fill="url(#waterFill)" />
+        <path d="M138 176 C178 166 218 186 262 176 C310 164 352 188 402 176" fill="none" stroke="#0284c7" strokeWidth="3" opacity="0.55" />
+
+        <rect x="230" y={blockTop} width="80" height="82" rx="6" fill="#f97316" stroke="#1f2937" strokeWidth="3" />
+        {displacedHeight > 0 ? (
+          <rect x="230" y={Math.max(blockTop, waterTop)} width="80" height={displacedHeight} rx="4" fill="#1d4ed8" opacity="0.28" />
+        ) : null}
+        <Arrow x1={270} y1={blockTop + 50} x2={270} y2={blockTop + 50 - Math.max(28, buoyancy * 0.8)} color="#16a34a" label="F浮" />
+        <Arrow x1={300} y1={blockTop + 44} x2={300} y2={blockTop + 116} color="#7b3ff2" label="G" />
+
+        <rect x="482" y="78" width="158" height="96" rx="12" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <text x="506" y="112" fill="#334155" fontSize="18" fontWeight="900">弹簧测力计</text>
+        <text x="526" y="148" fill="#1d4ed8" fontSize="28" fontWeight="900">{reading.toFixed(1)} N</text>
+        <rect x="480" y="218" width="184" height="118" rx="12" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="502" y="294" width={Math.max(24, buoyancy * 1.45)} height="22" rx="11" fill="#16a34a" />
+        <text x="500" y="250" fill="#334155" fontSize="18" fontWeight="900">F浮 = G排</text>
+        <text x="500" y="278" fill="#475569" fontSize="15" fontWeight="700">浸入体积越大，排开液体越多</text>
       </svg>
     </div>
   )
