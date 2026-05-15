@@ -47,7 +47,8 @@ function App() {
   const [selectedStage, setSelectedStage] = useState<'初中' | '高中'>(books[0].stage)
   const [selectedBookId, setSelectedBookId] = useState(books[0].id)
   const [selectedChapterId, setSelectedChapterId] = useState(chapters[0].id)
-  const [selectedTemplateId, setSelectedTemplateId] = useState(chapters[0].modelIds[0])
+  const [selectedLessonTitle, setSelectedLessonTitle] = useState(chapters[0].sections[0].title)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
 
   const visibleBooks = useMemo(
     () => books.filter((book) => book.stage === selectedStage),
@@ -61,17 +62,19 @@ function App() {
 
   const selectedBook = books.find((book) => book.id === selectedBookId) ?? books[0]
   const selectedChapter = chapters.find((chapter) => chapter.id === selectedChapterId) ?? chapters[0]
-  const selectedTemplate =
-    modelTemplates.find((template) => template.id === selectedTemplateId) ??
-    modelTemplates.find((template) => template.id === getFirstModelId(selectedChapter)) ??
-    modelTemplates[0]
+  const selectedLesson =
+    selectedChapter.sections.find((lesson) => lesson.title === selectedLessonTitle) ?? selectedChapter.sections[0]
+  const selectedTemplate = selectedTemplateId
+    ? modelTemplates.find((template) => template.id === selectedTemplateId) ?? null
+    : null
 
   function selectBook(bookId: string) {
     const firstChapter = chapters.find((chapter) => chapter.bookId === bookId) ?? chapters[0]
     setSelectedBookId(bookId)
     setSelectedStage(books.find((book) => book.id === bookId)?.stage ?? selectedStage)
     setSelectedChapterId(firstChapter.id)
-    setSelectedTemplateId(getFirstModelId(firstChapter))
+    setSelectedLessonTitle(firstChapter.sections[0].title)
+    setSelectedTemplateId(null)
   }
 
   function selectStage(stage: '初中' | '高中') {
@@ -80,12 +83,19 @@ function App() {
     setSelectedStage(stage)
     setSelectedBookId(firstBook.id)
     setSelectedChapterId(firstChapter.id)
-    setSelectedTemplateId(getFirstModelId(firstChapter))
+    setSelectedLessonTitle(firstChapter.sections[0].title)
+    setSelectedTemplateId(null)
   }
 
   function selectChapter(chapter: Chapter) {
     setSelectedChapterId(chapter.id)
-    setSelectedTemplateId(getFirstModelId(chapter))
+    setSelectedLessonTitle(chapter.sections[0].title)
+    setSelectedTemplateId(null)
+  }
+
+  function selectLesson(title: string) {
+    setSelectedLessonTitle(title)
+    setSelectedTemplateId(null)
   }
 
   return (
@@ -152,10 +162,13 @@ function App() {
                 {chapter.id === selectedChapter.id ? (
                   <div className="sidebar-lessons">
                     {chapter.sections.map((lesson, index) => (
-                      <section key={lesson.title} className="sidebar-lesson">
-                        <h3>
+                      <section
+                        key={lesson.title}
+                        className={lesson.title === selectedLesson.title && !selectedTemplate ? 'sidebar-lesson selected' : 'sidebar-lesson'}
+                      >
+                        <button type="button" className="lesson-trigger" onClick={() => selectLesson(lesson.title)}>
                           {index + 1}. {lesson.title}
-                        </h3>
+                        </button>
                         <div className="sidebar-keywords">
                           {lesson.knowledge.map((item) => (
                             <span key={item}>{item}</span>
@@ -166,8 +179,11 @@ function App() {
                             <button
                               key={template.id}
                               type="button"
-                              className={template.id === selectedTemplate.id ? 'selected' : ''}
-                              onClick={() => setSelectedTemplateId(template.id)}
+                              className={template.id === selectedTemplate?.id ? 'selected' : ''}
+                              onClick={() => {
+                                setSelectedLessonTitle(lesson.title)
+                                setSelectedTemplateId(template.id)
+                              }}
                             >
                               {template.title}
                             </button>
@@ -193,7 +209,11 @@ function App() {
         </header>
 
         <div className="content-grid">
-          <ModelExplainer key={selectedTemplate.id} template={selectedTemplate} chapter={selectedChapter} />
+          {selectedTemplate ? (
+            <ModelExplainer key={selectedTemplate.id} template={selectedTemplate} chapter={selectedChapter} />
+          ) : (
+            <KnowledgeExplainer chapter={selectedChapter} lesson={selectedLesson} />
+          )}
         </div>
       </section>
     </main>
@@ -402,14 +422,60 @@ function getLessonModels(lesson: { modelIds: string[] }) {
     .filter((template): template is ModelTemplate => Boolean(template))
 }
 
-function getFirstModelId(chapter: Chapter) {
+function KnowledgeExplainer({ chapter, lesson }: { chapter: Chapter; lesson: { title: string; knowledge: string[] } }) {
+  const notes = buildKnowledgeNotes(lesson.knowledge)
+
   return (
-    chapter.sections.flatMap((section) => section.modelIds).find((id) =>
-      modelTemplates.some((template) => template.id === id),
-    ) ??
-    chapter.modelIds.find((id) => modelTemplates.some((template) => template.id === id)) ??
-    modelTemplates[0].id
+    <section className="panel knowledge-panel">
+      <div className="section-title">
+        <span>{lesson.title}</span>
+        <small>知识点</small>
+      </div>
+      <div className="knowledge-hero">
+        <p>{chapter.chapterNo}：{chapter.title}</p>
+        <h3>先把概念、条件和公式关系讲清楚；只有需要动态过程时再进入模型。</h3>
+      </div>
+      <div className="knowledge-grid">
+        {notes.map((note) => (
+          <article key={note.title} className="knowledge-card">
+            <strong>{note.title}</strong>
+            <p>{note.text}</p>
+          </article>
+        ))}
+      </div>
+      <div className="knowledge-method">
+        <h3>讲解顺序</h3>
+        <ol>
+          <li>先明确概念适用的对象和条件。</li>
+          <li>再写出关键物理量及单位，避免直接套公式。</li>
+          <li>最后用一个简单例子检查理解，不强行加入动画。</li>
+        </ol>
+      </div>
+    </section>
   )
+}
+
+function buildKnowledgeNotes(items: string[]) {
+  const dictionary: Record<string, string> = {
+    单位换算: '先统一基本单位，再代入公式。长度常用 m、cm、mm，时间常用 s、min、h。',
+    刻度尺分度值: '读数前先看相邻两条刻线代表多少，估读到分度值下一位。',
+    估读: '估读不是乱猜，而是在最小分度之间判断大约位置。',
+    误差: '误差不可避免，可以通过多次测量取平均值减小。',
+    机械运动: '物体位置随时间改变叫机械运动，判断时必须先选参照物。',
+    参照物: '描述运动和静止时被选作标准的物体，同一物体选不同参照物结果可能不同。',
+    运动和静止的相对性: '运动状态取决于参照物，所以“静止”不是绝对的。',
+    速度: '速度描述运动快慢，等于路程与时间的比值。',
+    匀速直线运动: '物体沿直线运动且速度大小不变，任意相等时间通过路程相等。',
+    'v=s/t': '计算前先统一单位，注意平均速度对应总路程除以总时间。',
+    实验设计: '平均速度实验要明确测哪段路程、哪段时间，并尽量让计时更准确。',
+    路程时间测量: '路程用刻度尺沿运动路径测量，时间用秒表或光电门测量。',
+    平均速度: '平均速度反映一段过程的总体快慢，不等于每一时刻的速度。',
+  }
+
+  return items.map((item) => ({
+    title: item,
+    text: dictionary[item] ?? `围绕“${item}”明确概念、条件、单位和常见易错点；如果没有明显动态过程，用文字和例题讲清即可。`,
+  }))
 }
 
 function buildModelExplainer(template: ModelTemplate, chapter: Chapter) {
