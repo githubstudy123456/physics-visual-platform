@@ -1217,20 +1217,62 @@ function MagneticInductionScene({ params }: { params: SimParams }) {
 
 function StateChangeScene({ params }: { params: SimParams }) {
   const phase = params.temperature < 0 ? '固态' : params.temperature < 100 ? '液态' : '气态'
-  const spacing = params.temperature < 0 ? 28 : params.temperature < 100 ? 42 : 68
+  const normalizedTemp = Math.max(0, Math.min(1, (params.temperature + 20) / 140))
+  const spacing = params.temperature < 0 ? 22 : params.temperature < 100 ? 34 : 52
+  const heatWidth = 74 + normalizedTemp * 396
+  const vaporOpacity = params.temperature > 70 ? Math.min(0.75, (params.temperature - 70) / 60) : 0.08
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="物态变化模型">
-        <rect x="90" y="284" width="560" height="24" rx="12" className="efficiency-bg" />
-        <rect x="90" y="284" width={Math.max(30, params.temperature * 4.2 + 84)} height="24" rx="12" className="efficiency-fill" />
-        <text x="96" y="262" className="caption-label">温度 T={params.temperature}℃，当前：{phase}</text>
-        <rect x="96" y="92" width="186" height="126" rx="10" className="jar" />
-        {Array.from({ length: 16 }, (_, i) => (
-          <circle key={i} cx={128 + (i % 4) * spacing} cy={124 + Math.floor(i / 4) * spacing * 0.72} r="11" className="particle" />
+        <defs>
+          <linearGradient id="hotplate" x1="0" x2="1">
+            <stop offset="0%" stopColor="#1f2937" />
+            <stop offset="100%" stopColor="#475569" />
+          </linearGradient>
+          <linearGradient id="thermalWater" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.72" />
+            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.38" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="86" y="330" width="308" height="34" rx="10" fill="url(#hotplate)" />
+        <rect x="138" y="104" width="206" height="232" rx="18" fill="rgba(255,255,255,0.62)" stroke="#64748b" strokeWidth="4" />
+        <rect x="150" y="204" width="182" height="118" rx="10" fill="url(#thermalWater)" />
+        <path d="M152 204 C188 194 224 214 260 204 C292 194 312 212 332 204" fill="none" stroke="#0284c7" strokeWidth="3" opacity="0.55" />
+        {Array.from({ length: 15 }, (_, i) => (
+          <path
+            key={i}
+            d={`M${174 + (i % 5) * 34} ${182 - Math.floor(i / 5) * 28} C${160 + (i % 5) * 34} ${156 - Math.floor(i / 5) * 32} ${190 + (i % 5) * 34} ${144 - Math.floor(i / 5) * 32} ${178 + (i % 5) * 34} ${118 - Math.floor(i / 5) * 24}`}
+            fill="none"
+            stroke="#94a3b8"
+            strokeWidth="2"
+            opacity={vaporOpacity}
+          />
         ))}
-        <Arrow x1={330} y1={156} x2={458} y2={156} color="#f97316" label="吸热" />
-        <Arrow x1={458} y1={186} x2={330} y2={186} color="#1f6feb" label="放热" />
-        <text x="488" y="170" className="label small">固 液 气</text>
+        {Array.from({ length: 20 }, (_, i) => {
+          const row = Math.floor(i / 5)
+          const col = i % 5
+          const jitter = params.temperature > 0 ? Math.sin(params.time / 8 + i) * normalizedTemp * 10 : 0
+          return (
+            <circle
+              key={i}
+              cx={180 + col * spacing + jitter}
+              cy={236 + row * Math.max(22, spacing * 0.62) + Math.cos(params.time / 10 + i) * normalizedTemp * 7}
+              r="8"
+              fill={params.temperature < 0 ? '#60a5fa' : params.temperature < 100 ? '#2563eb' : '#94a3b8'}
+              opacity="0.82"
+            />
+          )
+        })}
+        <rect x="424" y="86" width="52" height="230" rx="20" fill="#ffffff" stroke="#64748b" strokeWidth="3" />
+        <rect x="442" y={274 - normalizedTemp * 162} width="16" height={36 + normalizedTemp * 162} rx="8" fill={params.temperature < 0 ? '#2563eb' : '#ef4444'} />
+        <circle cx="450" cy="300" r="22" fill={params.temperature < 0 ? '#2563eb' : '#ef4444'} />
+        <text x="498" y="130" fill="#101828" fontSize="24" fontWeight="900">{params.temperature}℃</text>
+        <text x="498" y="168" fill="#334155" fontSize="20" fontWeight="900">当前：{phase}</text>
+        <rect x="498" y="212" width="150" height="22" rx="11" fill="#e5e7eb" />
+        <rect x="498" y="212" width={heatWidth * 0.36} height="22" rx="11" fill={params.temperature < 0 ? '#2563eb' : '#f97316'} />
+        <text x="498" y="270" fill="#475569" fontSize="16" fontWeight="800">温度升高，粒子运动更剧烈</text>
       </svg>
     </div>
   )
@@ -1325,15 +1367,30 @@ function ElectricPowerScene({ params }: { params: SimParams }) {
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="电功率模型">
-        <rect x="130" y="92" width="500" height="236" rx="12" className="wire-box" />
-        <circle cx="278" cy="210" r="42" className="meter" />
-        <circle cx="278" cy="210" r={18 + glow * 26} className="bulb-glow" />
-        <text x="258" y="218" className="label small">灯</text>
-        <rect x="410" y="184" width="92" height="52" rx="8" className="resistor" />
-        <text x="430" y="218" className="label small">R</text>
-        <line x1="130" y1="210" x2="630" y2="210" className="wire" />
-        <rect x="154" y="288" width={Math.min(360, power * 18)} height="24" rx="12" className="efficiency-fill" />
-        <text x="152" y="360" className="caption-label">P=UI={power.toFixed(1)}W，亮度看实际功率</text>
+        <defs>
+          <radialGradient id="lampGlow" cx="50%" cy="50%" r="62%">
+            <stop offset="0%" stopColor="#fde68a" stopOpacity={0.95 * glow} />
+            <stop offset="100%" stopColor="#facc15" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="100" y="108" width="536" height="218" rx="14" fill="#ffffff" stroke="#cbd5e1" strokeWidth="3" />
+        <path d="M150 218 H256 M344 218 H424 M506 218 H612 M150 218 V286 H612 V218" fill="none" stroke="#334155" strokeWidth="7" strokeLinecap="round" />
+        <rect x="136" y="184" width="64" height="68" rx="8" fill="#e2e8f0" stroke="#334155" strokeWidth="3" />
+        <line x1="152" y1="198" x2="152" y2="238" stroke="#334155" strokeWidth="4" />
+        <line x1="180" y1="206" x2="180" y2="230" stroke="#334155" strokeWidth="8" />
+        <circle cx="300" cy="218" r={78 + glow * 34} fill="url(#lampGlow)" />
+        <circle cx="300" cy="218" r="44" fill="#fff7ed" stroke="#334155" strokeWidth="4" />
+        <path d="M282 220 C290 194 308 194 318 220" fill="none" stroke="#f59e0b" strokeWidth="5" />
+        <rect x="282" y="258" width="36" height="20" rx="4" fill="#64748b" />
+        <rect x="424" y="190" width="82" height="56" rx="8" fill="#fee2e2" stroke="#334155" strokeWidth="3" />
+        <path d="M438 218 H452 L462 204 L474 232 L486 204 L498 218" fill="none" stroke="#ef4444" strokeWidth="4" />
+        <rect x="128" y="334" width="484" height="24" rx="12" fill="#e5e7eb" />
+        <rect x="128" y="334" width={Math.min(484, 80 + power * 22)} height="24" rx="12" fill="#facc15" />
+        <rect x="540" y="124" width="118" height="84" rx="10" fill="#0f172a" />
+        <text x="558" y="158" fill="#e5edf7" fontSize="18" fontWeight="900">功率</text>
+        <text x="558" y="190" fill="#fde68a" fontSize="27" fontWeight="900">{power.toFixed(1)} W</text>
+        <text x="144" y="390" fill="#334155" fontSize="17" fontWeight="800">U={params.voltage}V  I={current.toFixed(2)}A  R={params.resistance}Ω</text>
       </svg>
     </div>
   )
@@ -1386,21 +1443,25 @@ function ForceScene({ params }: { params: SimParams }) {
 
 function CircuitScene({ params }: { params: SimParams }) {
   const current = params.voltage / params.resistance
-  const sliderX = 510 + params.resistance * 2.2
+  const sliderX = 404 + params.resistance * 4.8
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="电路模型">
-        <rect x="120" y="90" width="500" height="250" rx="12" className="wire-box" />
-        <line x1="180" y1="90" x2="180" y2="340" className="wire" />
-        <line x1="120" y1="210" x2="620" y2="210" className="wire" />
-        <circle cx="260" cy="210" r="34" className="meter" />
-        <text x="248" y="219" className="label small">A</text>
-        <rect x="380" y="184" width="90" height="52" rx="8" className="resistor" />
-        <text x="407" y="219" className="label small">R</text>
-        <rect x="500" y="230" width="86" height="40" rx="5" className="slider" />
-        <circle cx={sliderX} cy="230" r="8" className="node red-node" />
-        <path d={`M ${sliderX} 230 L 590 180`} className="signal" />
-        <text x="500" y="308" className="caption-label">I={current.toFixed(2)}A，R={params.resistance}Ω</text>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="92" y="70" width="570" height="272" rx="14" fill="#ffffff" stroke="#cbd5e1" strokeWidth="3" />
+        <path d="M142 204 H224 M296 204 H392 M572 204 H622 M142 204 V298 H622 V204" fill="none" stroke="#334155" strokeWidth="7" strokeLinecap="round" />
+        <rect x="126" y="164" width="58" height="80" rx="8" fill="#e2e8f0" stroke="#334155" strokeWidth="3" />
+        <line x1="144" y1="178" x2="144" y2="230" stroke="#334155" strokeWidth="4" />
+        <line x1="166" y1="186" x2="166" y2="222" stroke="#334155" strokeWidth="8" />
+        <circle cx="260" cy="204" r="36" fill="#ffffff" stroke="#334155" strokeWidth="4" />
+        <text x="248" y="214" fill="#0f172a" fontSize="24" fontWeight="900">A</text>
+        <path d={`M392 204 H572 M${sliderX} 178 L${sliderX - 38} 226`} stroke="#334155" strokeWidth="6" strokeLinecap="round" fill="none" />
+        <rect x="410" y="170" width="132" height="68" rx="8" fill="#fff7ed" stroke="#334155" strokeWidth="3" />
+        <path d="M426 204 H442 L452 190 L464 218 L476 190 L488 218 L500 190 L512 204 H528" fill="none" stroke="#f97316" strokeWidth="4" />
+        <circle cx={sliderX} cy="178" r="9" fill="#1f6feb" stroke="#dbeafe" strokeWidth="3" />
+        <rect x="472" y="262" width="148" height="50" rx="8" fill="#0f172a" />
+        <text x="492" y="293" fill="#e5edf7" fontSize="20" fontWeight="900">I={current.toFixed(2)} A</text>
+        <text x="126" y="374" fill="#334155" fontSize="18" fontWeight="800">滑片向右，接入电阻增大，电流减小</text>
       </svg>
     </div>
   )
@@ -1454,19 +1515,46 @@ function GraphScene({ params }: { params: SimParams }) {
 }
 
 function OpticsScene({ params }: { params: SimParams }) {
-  const rayY = 215 - Math.tan((params.angle * Math.PI) / 180) * 170
+  const lensX = 380
+  const objectX = 130 + params.angle * 1.7
+  const objectTop = 164
+  const axisY = 226
+  const focalLength = 106
+  const objectDistance = lensX - objectX
+  const imageDistance = Math.min(250, Math.max(78, (focalLength * objectDistance) / Math.max(18, objectDistance - focalLength)))
+  const imageX = lensX + imageDistance
+  const imageHeight = Math.min(92, Math.max(28, (axisY - objectTop) * imageDistance / objectDistance))
+
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="光路模型">
-        <line x1="380" y1="70" x2="380" y2="360" className="normal" />
-        <line x1="130" y1="215" x2="630" y2="215" className="axis" />
-        <path d="M 362 94 C 320 160 320 270 362 336" className="lens-outline" />
-        <path d="M 398 94 C 440 160 440 270 398 336" className="lens-outline" />
-        <line x1="126" y1={rayY} x2="380" y2="215" className="ray" />
-        <line x1="380" y1="215" x2="636" y2={430 - rayY} className="ray" />
-        <line x1="126" y1="294" x2="380" y2="215" className="ray alt" />
-        <line x1="380" y1="215" x2="636" y2="135" className="ray alt" />
-        <text x="288" y="56" className="caption-label">用主光线确定成像</text>
+        <defs>
+          <linearGradient id="lensGlass" x1="0" x2="1">
+            <stop offset="0%" stopColor="#bfdbfe" stopOpacity="0.35" />
+            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.72" />
+            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.35" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <line x1="76" y1={axisY} x2="690" y2={axisY} stroke="#475569" strokeWidth="3" />
+        <line x1={lensX - focalLength} y1={axisY - 12} x2={lensX - focalLength} y2={axisY + 12} stroke="#64748b" strokeWidth="3" />
+        <line x1={lensX + focalLength} y1={axisY - 12} x2={lensX + focalLength} y2={axisY + 12} stroke="#64748b" strokeWidth="3" />
+        <text x={lensX - focalLength - 8} y={axisY + 34} fill="#64748b" fontSize="14" fontWeight="800">F</text>
+        <text x={lensX + focalLength - 8} y={axisY + 34} fill="#64748b" fontSize="14" fontWeight="800">F</text>
+        <rect x="96" y="310" width="580" height="16" rx="8" fill="#cbd5e1" />
+        <path d="M 360 78 C 324 144 324 304 360 372" fill="url(#lensGlass)" stroke="#2563eb" strokeWidth="4" />
+        <path d="M 400 78 C 436 144 436 304 400 372" fill="url(#lensGlass)" stroke="#2563eb" strokeWidth="4" />
+        <line x1={lensX} y1="78" x2={lensX} y2="372" stroke="#60a5fa" strokeWidth="2" opacity="0.5" />
+        <line x1={objectX} y1={axisY} x2={objectX} y2={objectTop} stroke="#111827" strokeWidth="5" />
+        <path d={`M${objectX - 18} ${objectTop + 26} C${objectX - 4} ${objectTop - 10} ${objectX + 14} ${objectTop - 8} ${objectX + 18} ${objectTop + 24}`} fill="#f97316" stroke="#9a3412" strokeWidth="2" />
+        <line x1={objectX} y1={objectTop} x2={lensX} y2={objectTop} stroke="#ef4444" strokeWidth="4" />
+        <line x1={lensX} y1={objectTop} x2={imageX} y2={axisY + imageHeight} stroke="#ef4444" strokeWidth="4" />
+        <line x1={objectX} y1={objectTop} x2={lensX} y2={axisY} stroke="#f97316" strokeWidth="4" />
+        <line x1={lensX} y1={axisY} x2={imageX} y2={axisY + imageHeight} stroke="#f97316" strokeWidth="4" />
+        <rect x={imageX - 34} y="120" width="68" height="188" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="3" />
+        <line x1={imageX} y1={axisY} x2={imageX} y2={axisY + imageHeight} stroke="#1f2937" strokeWidth="5" opacity="0.85" />
+        <path d={`M${imageX - 13} ${axisY + imageHeight - 18} C${imageX - 2} ${axisY + imageHeight + 14} ${imageX + 12} ${axisY + imageHeight + 10} ${imageX + 14} ${axisY + imageHeight - 18}`} fill="#fb923c" opacity="0.8" />
+        <text x="104" y="58" fill="#334155" fontSize="18" fontWeight="900">凸透镜成像：平行光过焦点，过光心方向不变</text>
       </svg>
     </div>
   )
