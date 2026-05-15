@@ -140,16 +140,44 @@ function App() {
           </div>
           <div className="chapter-list">
             {visibleChapters.map((chapter) => (
-              <button
+              <article
                 key={chapter.id}
-                type="button"
-                className={chapter.id === selectedChapter.id ? 'selected' : ''}
-                onClick={() => selectChapter(chapter)}
+                className={chapter.id === selectedChapter.id ? 'chapter-card selected' : 'chapter-card'}
               >
-                <small>{chapter.chapterNo}</small>
-                <strong>{chapter.title}</strong>
-                <span>{chapter.domain}</span>
-              </button>
+                <button type="button" className="chapter-trigger" onClick={() => selectChapter(chapter)}>
+                  <small>{chapter.chapterNo}</small>
+                  <strong>{chapter.title}</strong>
+                  <span>{chapter.domain}</span>
+                </button>
+                {chapter.id === selectedChapter.id ? (
+                  <div className="sidebar-lessons">
+                    {chapter.sections.map((lesson, index) => (
+                      <section key={lesson.title} className="sidebar-lesson">
+                        <h3>
+                          {index + 1}. {lesson.title}
+                        </h3>
+                        <div className="sidebar-keywords">
+                          {lesson.knowledge.map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                        <div className="sidebar-models">
+                          {getLessonModels(lesson).map((template) => (
+                            <button
+                              key={template.id}
+                              type="button"
+                              className={template.id === selectedTemplate.id ? 'selected' : ''}
+                              onClick={() => setSelectedTemplateId(template.id)}
+                            >
+                              {template.title}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
             ))}
           </div>
         </section>
@@ -162,49 +190,9 @@ function App() {
             <h2>{selectedChapter.chapterNo}：{selectedChapter.title}</h2>
             <p>{selectedBook.source}</p>
           </div>
-          <div className="pipeline-status">
-            <span>知识点</span>
-            <span>交互模型</span>
-            <span>参数调节</span>
-          </div>
         </header>
 
         <div className="content-grid">
-          <section className="panel chapter-detail">
-            <div className="section-title">
-              <span>章节知识点与模型</span>
-              <small>{selectedChapter.sections.length} 节</small>
-            </div>
-            <div className="lesson-list">
-              {selectedChapter.sections.map((lesson, index) => (
-                <article key={lesson.title} className="lesson-card">
-                  <div className="lesson-index">{index + 1}</div>
-                  <div>
-                    <h3>{lesson.title}</h3>
-                    <div className="keyword-grid">
-                      {lesson.knowledge.map((item) => (
-                        <span key={item}>{item}</span>
-                      ))}
-                    </div>
-                    <div className="lesson-models">
-                      {getLessonModels(lesson).map((template) => (
-                        <button
-                          key={template.id}
-                          type="button"
-                          className={template.id === selectedTemplate.id ? 'selected' : ''}
-                          onClick={() => setSelectedTemplateId(template.id)}
-                        >
-                          <strong>{template.title}</strong>
-                          <span>{template.level}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
           <ModelExplainer key={selectedTemplate.id} template={selectedTemplate} chapter={selectedChapter} />
         </div>
       </section>
@@ -588,7 +576,7 @@ function getObservations(template: ModelTemplate, params: SimParams) {
     'kinematics-graph': [
       { label: '速度关系', value: 'v=v0+at' },
       { label: '图像斜率', value: `a=${params.force} m/s²` },
-      { label: '位移含义', value: 'v-t 图像面积' },
+      { label: '实验观测', value: '频闪位置与光电门' },
     ],
     'sound-wave': [
       { label: '音调', value: params.force > 70 ? '较高' : '较低' },
@@ -773,8 +761,6 @@ function MeasurementScene({ params }: { params: SimParams }) {
   const needleAngle = (stopwatchAngle * Math.PI) / 180
   const needleX = 598 + Math.cos(needleAngle) * 46
   const needleY = 132 + Math.sin(needleAngle) * 46
-  const graphX = 536 + progress * 144
-  const graphY = 324 - progress * 104
 
   return (
     <div className="visual-canvas">
@@ -846,13 +832,14 @@ function MeasurementScene({ params }: { params: SimParams }) {
         </g>
 
         <g>
-          <rect x="524" y="260" width="180" height="116" rx="8" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
-          <line x1="536" y1="324" x2="682" y2="324" stroke="#475569" strokeWidth="3" />
-          <line x1="536" y1="324" x2="536" y2="280" stroke="#475569" strokeWidth="3" />
-          <polyline points={`536,324 ${graphX},${graphY}`} fill="none" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
-          <circle cx={graphX} cy={graphY} r="6" fill="#2563eb" />
-          <text x="542" y="278" fill="#334155" fontSize="15" fontWeight="800">s-t 图像</text>
-          <text x="576" y="356" fill="#1e293b" fontSize="15" fontWeight="800">v=s/t={speedCmS.toFixed(1)}cm/s</text>
+          <rect x="510" y="260" width="202" height="118" rx="10" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+          <text x="528" y="288" fill="#334155" fontSize="17" fontWeight="900">实验记录</text>
+          <line x1="528" y1="302" x2="692" y2="302" stroke="#cbd5e1" strokeWidth="2" />
+          <text x="532" y="326" fill="#475569" fontSize="15" fontWeight="800">路程 s</text>
+          <text x="630" y="326" fill="#0f172a" fontSize="15" fontWeight="900">{distanceCm.toFixed(0)} cm</text>
+          <text x="532" y="350" fill="#475569" fontSize="15" fontWeight="800">时间 t</text>
+          <text x="630" y="350" fill="#0f172a" fontSize="15" fontWeight="900">{totalTime.toFixed(1)} s</text>
+          <text x="532" y="372" fill="#1d4ed8" fontSize="16" fontWeight="900">v = s / t = {speedCmS.toFixed(1)} cm/s</text>
         </g>
       </svg>
     </div>
@@ -861,33 +848,62 @@ function MeasurementScene({ params }: { params: SimParams }) {
 
 function KinematicsScene({ params }: { params: SimParams }) {
   const simulation = runKinematicsEngine(params)
-  const graphPoints = simulation.samples
-    .map((sample) => `${110 + sample.t * 38},${332 - Math.max(0, sample.v) * 12}`)
-    .join(' ')
-  const graphArea = graphPoints ? `110,340 ${graphPoints} 430,340` : '110,340 430,340'
+  const strobe = simulation.samples.filter((_, index) => index % 2 === 0).slice(0, 7)
+  const sensorX = 590
+  const passedSensor = simulation.x + 84 >= sensorX
 
   return (
     <div className="visual-canvas">
       <svg viewBox="0 0 760 430" role="img" aria-label="匀变速直线运动模型">
-        <rect x="0" y="0" width="760" height="430" className="light-bg" />
-        <line x1="76" y1="154" x2="684" y2="154" className="axis" />
+        <defs>
+          <linearGradient id="railMetal" x1="0" x2="1">
+            <stop offset="0%" stopColor="#94a3b8" />
+            <stop offset="50%" stopColor="#f8fafc" />
+            <stop offset="100%" stopColor="#64748b" />
+          </linearGradient>
+          <linearGradient id="motionCart" x1="0" x2="1">
+            <stop offset="0%" stopColor="#d97706" />
+            <stop offset="100%" stopColor="#fbbf24" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="430" fill="#f8fafc" />
+        <rect x="70" y="288" width="622" height="18" rx="9" fill="#cbd5e1" />
+        <line x1="82" y1="214" x2="678" y2="214" stroke="url(#railMetal)" strokeWidth="8" strokeLinecap="round" />
+        <line x1="82" y1="244" x2="678" y2="244" stroke="url(#railMetal)" strokeWidth="8" strokeLinecap="round" />
         {Array.from({ length: 11 }, (_, i) => (
-          <line key={i} x1={92 + i * 56} y1="136" x2={92 + i * 56} y2="172" className="normal" />
+          <g key={i}>
+            <line x1={96 + i * 56} y1="196" x2={96 + i * 56} y2="266" stroke="#94a3b8" strokeWidth="2" />
+            <text x={88 + i * 56} y="188" fill="#64748b" fontSize="12" fontWeight="700">{i * 10}</text>
+          </g>
         ))}
-        <rect x={simulation.x} y="106" width="84" height="44" rx="8" className="cart" />
-        <circle cx={simulation.x + 18} cy="154" r="10" className="meter" />
-        <circle cx={simulation.x + 66} cy="154" r="10" className="meter" />
-        <Arrow x1={simulation.x + 42} y1={98} x2={simulation.x + 42 + simulation.v * 10} y2={98} color="#1f6feb" label="v" />
-        <Arrow x1={simulation.x + 42} y1={82} x2={simulation.x + 42 + params.force * 0.9} y2={82} color="#f97316" label="a" />
 
-        <line x1="88" y1="340" x2="430" y2="340" className="axis" />
-        <line x1="110" y1="352" x2="110" y2="210" className="axis" />
-        <polyline points={graphPoints} className="graph-line" />
-        <polygon points={graphArea} className="area" />
-        <text x="132" y="216" className="caption-label">v-t 图像：斜率是加速度，面积是位移</text>
-        <rect x="500" y="240" width="180" height="92" rx="8" className="energy-box" />
-        <text x="522" y="278" className="label small">v={simulation.v.toFixed(1)}m/s</text>
-        <text x="522" y="314" className="label small">Matter.js</text>
+        {strobe.map((sample, index) => (
+          <rect
+            key={index}
+            x={sample.x}
+            y="172"
+            width="74"
+            height="42"
+            rx="8"
+            fill="#94a3b8"
+            opacity={0.12 + index * 0.08}
+          />
+        ))}
+
+        <rect x={simulation.x} y="168" width="86" height="46" rx="8" fill="url(#motionCart)" stroke="#1f2937" strokeWidth="3" />
+        <circle cx={simulation.x + 18} cy="222" r="11" fill="#e2e8f0" stroke="#1f2937" strokeWidth="4" />
+        <circle cx={simulation.x + 68} cy="222" r="11" fill="#e2e8f0" stroke="#1f2937" strokeWidth="4" />
+        <Arrow x1={simulation.x + 46} y1={148} x2={simulation.x + 46 + simulation.v * 10} y2={148} color="#1f6feb" label="v" />
+        <Arrow x1={simulation.x + 46} y1={124} x2={simulation.x + 46 + params.force * 0.9} y2={124} color="#f97316" label="a" />
+
+        <line x1={sensorX} y1="120" x2={sensorX} y2="270" stroke={passedSensor ? '#16a34a' : '#475569'} strokeWidth="4" />
+        <rect x={sensorX - 24} y="96" width="48" height="26" rx="6" fill={passedSensor ? '#dcfce7' : '#f1f5f9'} stroke="#475569" />
+        <text x={sensorX - 20} y="114" fill="#334155" fontSize="13" fontWeight="800">光电门</text>
+
+        <rect x="96" y="314" width="568" height="54" rx="10" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <text x="118" y="346" fill="#334155" fontSize="18" fontWeight="900">位移 x={Math.max(0, simulation.x - 80).toFixed(1)} m</text>
+        <text x="322" y="346" fill="#334155" fontSize="18" fontWeight="900">速度 v={simulation.v.toFixed(1)} m/s</text>
+        <text x="520" y="346" fill="#334155" fontSize="18" fontWeight="900">加速度 a={(params.force / 280).toFixed(2)}</text>
       </svg>
     </div>
   )
