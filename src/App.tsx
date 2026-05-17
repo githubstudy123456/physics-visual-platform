@@ -10,6 +10,14 @@ import {
   type Chapter,
   type ModelTemplate,
 } from './data/curriculum'
+import {
+  chapterLectures,
+  knowledgePoints,
+  physicsSubjectOverview,
+  type ExerciseTask,
+  type KnowledgePointDetail,
+  type ViewMode,
+} from './data/systematic'
 
 type SimParams = {
   time: number
@@ -50,6 +58,8 @@ function App() {
   const [selectedChapterId, setSelectedChapterId] = useState(chapters[0].id)
   const [selectedLessonTitle, setSelectedLessonTitle] = useState(chapters[0].sections[0].title)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedView, setSelectedView] = useState<ViewMode>('subject')
+  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string | null>(null)
 
   const visibleBooks = useMemo(
     () => books.filter((book) => book.stage === selectedStage),
@@ -68,6 +78,11 @@ function App() {
   const selectedTemplate = selectedTemplateId
     ? modelTemplates.find((template) => template.id === selectedTemplateId) ?? null
     : null
+  const lessonKnowledgePoints = knowledgePoints.filter(
+    (point) => point.chapterId === selectedChapter.id && point.lessonTitle === selectedLesson.title,
+  )
+  const selectedKnowledge =
+    lessonKnowledgePoints.find((point) => point.id === selectedKnowledgeId) ?? lessonKnowledgePoints[0] ?? null
 
   function selectBook(bookId: string) {
     const firstChapter = chapters.find((chapter) => chapter.bookId === bookId) ?? chapters[0]
@@ -76,6 +91,8 @@ function App() {
     setSelectedChapterId(firstChapter.id)
     setSelectedLessonTitle(firstChapter.sections[0].title)
     setSelectedTemplateId(null)
+    setSelectedKnowledgeId(null)
+    setSelectedView('chapter')
   }
 
   function selectStage(stage: '初中' | '高中') {
@@ -86,17 +103,39 @@ function App() {
     setSelectedChapterId(firstChapter.id)
     setSelectedLessonTitle(firstChapter.sections[0].title)
     setSelectedTemplateId(null)
+    setSelectedKnowledgeId(null)
+    setSelectedView('chapter')
   }
 
   function selectChapter(chapter: Chapter) {
     setSelectedChapterId(chapter.id)
     setSelectedLessonTitle(chapter.sections[0].title)
     setSelectedTemplateId(null)
+    setSelectedKnowledgeId(null)
+    setSelectedView('chapter')
   }
 
   function selectLesson(title: string) {
     setSelectedLessonTitle(title)
     setSelectedTemplateId(null)
+    setSelectedKnowledgeId(null)
+    setSelectedView('lesson')
+  }
+
+  function selectKnowledge(point: KnowledgePointDetail) {
+    setSelectedLessonTitle(point.lessonTitle)
+    setSelectedKnowledgeId(point.id)
+    setSelectedTemplateId(null)
+    setSelectedView('knowledge')
+  }
+
+  function selectPractice(point?: KnowledgePointDetail | null) {
+    if (point) {
+      setSelectedLessonTitle(point.lessonTitle)
+      setSelectedKnowledgeId(point.id)
+    }
+    setSelectedTemplateId(null)
+    setSelectedView('practice')
   }
 
   return (
@@ -109,6 +148,19 @@ function App() {
             <p>课程章节、模型库、题目视频工作台</p>
           </div>
         </div>
+
+        <button
+          type="button"
+          className={selectedView === 'subject' ? 'subject-entry selected' : 'subject-entry'}
+          onClick={() => {
+            setSelectedTemplateId(null)
+            setSelectedKnowledgeId(null)
+            setSelectedView('subject')
+          }}
+        >
+          <strong>学科总览</strong>
+          <span>物理是什么、发展历史、知识框架</span>
+        </button>
 
         <section className="panel book-panel">
           <div className="section-title">
@@ -171,11 +223,25 @@ function App() {
                           {index + 1}. {lesson.title}
                         </button>
                         <div className="sidebar-keywords">
-                          {lesson.knowledge.map((item) => (
-                            <span key={item}>{item}</span>
-                          ))}
+                          {lessonKnowledgePointsFor(selectedChapter.id, lesson.title).length > 0
+                            ? lessonKnowledgePointsFor(selectedChapter.id, lesson.title).map((point) => (
+                                <button
+                                  key={point.id}
+                                  type="button"
+                                  className={point.id === selectedKnowledge?.id && selectedView === 'knowledge' ? 'keyword-button selected' : 'keyword-button'}
+                                  onClick={() => selectKnowledge(point)}
+                                >
+                                  {point.title}
+                                </button>
+                              ))
+                            : lesson.knowledge.map((item) => <span key={item}>{item}</span>)}
                         </div>
                         <div className="sidebar-models">
+                          {lessonKnowledgePointsFor(selectedChapter.id, lesson.title).length > 0 ? (
+                            <button type="button" onClick={() => selectPractice(lessonKnowledgePointsFor(selectedChapter.id, lesson.title)[0])}>
+                              练习任务
+                            </button>
+                          ) : null}
                           {getLessonModels(lesson).map((template) => (
                             <button
                               key={template.id}
@@ -183,6 +249,7 @@ function App() {
                               className={template.id === selectedTemplate?.id ? 'selected' : ''}
                               onClick={() => {
                                 setSelectedLessonTitle(lesson.title)
+                                setSelectedView('model')
                                 setSelectedTemplateId(template.id)
                               }}
                             >
@@ -204,17 +271,39 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Visual Physics Studio</p>
-            <h2>{selectedChapter.chapterNo}：{selectedChapter.title}</h2>
-            <p>{selectedBook.source}</p>
+            <h2>{selectedView === 'subject' ? '物理学科体系' : `${selectedChapter.chapterNo}：${selectedChapter.title}`}</h2>
+            <p>{selectedView === 'subject' ? physicsSubjectOverview.tagline : selectedBook.source}</p>
           </div>
         </header>
 
         <div className="content-grid">
-          {selectedTemplate ? (
+          {selectedView === 'subject' ? <SubjectOverviewPanel /> : null}
+          {selectedView === 'chapter' ? <ChapterLecturePanel chapter={selectedChapter} /> : null}
+          {selectedView === 'lesson' ? (
+            <KnowledgeExplainer
+              chapter={selectedChapter}
+              lesson={selectedLesson}
+              points={lessonKnowledgePoints}
+              onSelectKnowledge={selectKnowledge}
+              onSelectPractice={selectPractice}
+            />
+          ) : null}
+          {selectedView === 'knowledge' && selectedKnowledge ? (
+            <KnowledgePointPanel
+              point={selectedKnowledge}
+              onSelectModel={(modelId) => {
+                setSelectedTemplateId(modelId)
+                setSelectedView('model')
+              }}
+              onSelectPractice={() => selectPractice(selectedKnowledge)}
+            />
+          ) : null}
+          {selectedView === 'practice' ? (
+            <PracticePanel chapter={selectedChapter} point={selectedKnowledge} lessonPoints={lessonKnowledgePoints} />
+          ) : null}
+          {selectedView === 'model' && selectedTemplate ? (
             <ModelExplainer key={selectedTemplate.id} template={selectedTemplate} chapter={selectedChapter} />
-          ) : (
-            <KnowledgeExplainer chapter={selectedChapter} lesson={selectedLesson} />
-          )}
+          ) : null}
         </div>
       </section>
     </main>
@@ -423,27 +512,142 @@ function getLessonModels(lesson: { modelIds: string[] }) {
     .filter((template): template is ModelTemplate => Boolean(template))
 }
 
-function KnowledgeExplainer({ chapter, lesson }: { chapter: Chapter; lesson: { title: string; knowledge: string[] } }) {
+function lessonKnowledgePointsFor(chapterId: string, lessonTitle: string) {
+  return knowledgePoints.filter((point) => point.chapterId === chapterId && point.lessonTitle === lessonTitle)
+}
+
+function SubjectOverviewPanel() {
+  return (
+    <section className="panel knowledge-panel">
+      <div className="section-title">
+        <span>{physicsSubjectOverview.subject}学科总览</span>
+        <small>先建立地图</small>
+      </div>
+      <div className="knowledge-hero">
+        <p>学科定位</p>
+        <h3>{physicsSubjectOverview.whatIsIt}</h3>
+      </div>
+      <div className="system-grid">
+        <article className="system-card wide">
+          <h3>发展历史</h3>
+          <ol>
+            {physicsSubjectOverview.history.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ol>
+        </article>
+        {physicsSubjectOverview.framework.map((group) => (
+          <article key={group.title} className="system-card">
+            <h3>{group.title}</h3>
+            <div className="system-tags">
+              {group.items.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          </article>
+        ))}
+        <article className="system-card wide">
+          <h3>学习方法</h3>
+          <ul>
+            {physicsSubjectOverview.studyMethod.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+function ChapterLecturePanel({ chapter }: { chapter: Chapter }) {
+  const lecture = chapterLectures.find((item) => item.chapterId === chapter.id)
+
+  return (
+    <section className="panel knowledge-panel">
+      <div className="section-title">
+        <span>{chapter.chapterNo}：{chapter.title}</span>
+        <small>章节讲义</small>
+      </div>
+      <div className="knowledge-hero">
+        <p>本章目标</p>
+        <h3>{lecture?.goal ?? '本章先按教材顺序建立知识框架，再进入知识点精讲和练习闭环。'}</h3>
+      </div>
+      <div className="system-grid">
+        <article className="system-card wide">
+          <h3>讲义版</h3>
+          {(lecture?.lectureVersion ?? chapter.sections.map((section) => `${section.title}：${section.knowledge.join('、')}`)).map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </article>
+        <article className="system-card">
+          <h3>课堂讲解版</h3>
+          <ol>
+            {(lecture?.classroomScript ?? ['先讲概念，再讲例题，最后安排练习反馈。']).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ol>
+        </article>
+        <article className="system-card">
+          <h3>练习清单版</h3>
+          <ol>
+            {(lecture?.practiceList ?? ['基础巩固', '提高训练', '真题类型']).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ol>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+function KnowledgeExplainer({
+  chapter,
+  lesson,
+  points,
+  onSelectKnowledge,
+  onSelectPractice,
+}: {
+  chapter: Chapter
+  lesson: { title: string; knowledge: string[] }
+  points: KnowledgePointDetail[]
+  onSelectKnowledge: (point: KnowledgePointDetail) => void
+  onSelectPractice: (point: KnowledgePointDetail | null) => void
+}) {
   const notes = buildKnowledgeNotes(lesson.knowledge)
 
   return (
     <section className="panel knowledge-panel">
       <div className="section-title">
         <span>{lesson.title}</span>
-        <small>知识点</small>
+        <small>{points.length > 0 ? '精讲样板' : '知识点'}</small>
       </div>
       <div className="knowledge-hero">
         <p>{chapter.chapterNo}：{chapter.title}</p>
         <h3>先把概念、条件和公式关系讲清楚；只有需要动态过程时再进入模型。</h3>
       </div>
-      <div className="knowledge-grid">
-        {notes.map((note) => (
-          <article key={note.title} className="knowledge-card">
-            <strong>{note.title}</strong>
-            <p>{note.text}</p>
-          </article>
-        ))}
-      </div>
+      {points.length > 0 ? (
+        <div className="knowledge-grid">
+          {points.map((point) => (
+            <article key={point.id} className="knowledge-card action-card">
+              <strong>{point.title}</strong>
+              <p>{point.definition}</p>
+              <div className="card-actions">
+                <button type="button" onClick={() => onSelectKnowledge(point)}>进入精讲</button>
+                <button type="button" onClick={() => onSelectPractice(point)}>练习任务</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="knowledge-grid">
+          {notes.map((note) => (
+            <article key={note.title} className="knowledge-card">
+              <strong>{note.title}</strong>
+              <p>{note.text}</p>
+            </article>
+          ))}
+        </div>
+      )}
       <div className="knowledge-method">
         <h3>讲解顺序</h3>
         <ol>
@@ -453,6 +657,154 @@ function KnowledgeExplainer({ chapter, lesson }: { chapter: Chapter; lesson: { t
         </ol>
       </div>
     </section>
+  )
+}
+
+function KnowledgePointPanel({
+  point,
+  onSelectModel,
+  onSelectPractice,
+}: {
+  point: KnowledgePointDetail
+  onSelectModel: (modelId: string) => void
+  onSelectPractice: () => void
+}) {
+  return (
+    <section className="panel knowledge-panel">
+      <div className="section-title">
+        <span>{point.title}</span>
+        <small>{point.needsModel ? '精讲 + 可选模型' : '精讲'}</small>
+      </div>
+      <div className="knowledge-hero">
+        <p>{point.lessonTitle}</p>
+        <h3>{point.definition}</h3>
+      </div>
+      <div className="detail-grid">
+        <article className="system-card wide">
+          <h3>为什么学</h3>
+          <p>{point.why}</p>
+        </article>
+        <article className="system-card">
+          <h3>怎么用</h3>
+          <ol>
+            {point.howToUse.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ol>
+        </article>
+        <article className="system-card">
+          <h3>公式和单位</h3>
+          <p>{point.formula ?? '本知识点以概念判断和规范表达为主，不强行套公式。'}</p>
+          {point.unit ? <p>{point.unit}</p> : null}
+        </article>
+        <article className="system-card">
+          <h3>特例</h3>
+          <ul>
+            {point.specialCases.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+        <article className="system-card">
+          <h3>易错点</h3>
+          <ul>
+            {point.mistakes.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+        <article className="system-card wide">
+          <h3>例题</h3>
+          <p>{point.example.prompt}</p>
+          <strong>{point.example.solution}</strong>
+        </article>
+      </div>
+      <div className="pattern-grid">
+        {point.patterns.map((pattern) => (
+          <article key={pattern.title} className="pattern-card">
+            <span>{pattern.type}</span>
+            <strong>{pattern.title}</strong>
+            <p>{pattern.method}</p>
+            <small>{pattern.variation}</small>
+          </article>
+        ))}
+      </div>
+      <div className="card-actions block-actions">
+        {point.needsModel
+          ? point.modelIds.map((modelId) => {
+              const model = modelTemplates.find((template) => template.id === modelId)
+              return (
+                <button key={modelId} type="button" onClick={() => onSelectModel(modelId)}>
+                  打开模型：{model?.title ?? modelId}
+                </button>
+              )
+            })
+          : null}
+        <button type="button" onClick={onSelectPractice}>查看练习任务</button>
+      </div>
+    </section>
+  )
+}
+
+function PracticePanel({
+  chapter,
+  point,
+  lessonPoints,
+}: {
+  chapter: Chapter
+  point: KnowledgePointDetail | null
+  lessonPoints: KnowledgePointDetail[]
+}) {
+  const [score, setScore] = useState(80)
+  const tasks = point ? point.exercises : lessonPoints.flatMap((item) => item.exercises)
+  const level = score >= 90 ? '优秀' : score >= 80 ? '合格' : '未达标'
+  const advice =
+    score >= 90
+      ? '可以进入下一节，保留错题复盘。'
+      : score >= 80
+        ? '可以继续推进，但要订正错题并复讲易错点。'
+        : '先回到对应知识点和易错点，重做基础巩固。'
+
+  return (
+    <section className="panel knowledge-panel">
+      <div className="section-title">
+        <span>{point ? `${point.title}：练习任务` : `${chapter.title}：练习任务`}</span>
+        <small>80 合格 / 90 优秀</small>
+      </div>
+      <div className="mastery-box">
+        <div>
+          <p>当前得分</p>
+          <strong>{score} 分 · {level}</strong>
+          <span>{advice}</span>
+        </div>
+        <input type="range" min="0" max="100" value={score} onChange={(event) => setScore(Number(event.target.value))} />
+      </div>
+      <div className="exercise-grid">
+        {tasks.map((task) => (
+          <ExerciseTaskCard key={task.id} task={task} score={score} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ExerciseTaskCard({ task, score }: { task: ExerciseTask; score: number }) {
+  const status = score >= task.excellentScore ? '优秀' : score >= task.passScore ? '合格' : '需重练'
+
+  return (
+    <article className="exercise-card">
+      <div>
+        <span>{task.tier}</span>
+        <strong>{task.title}</strong>
+      </div>
+      <p>{task.source} · {task.pageOrRange}</p>
+      <p>目标：{task.target}</p>
+      <p>要求：{task.requirement}</p>
+      <footer>
+        <small>合格 {task.passScore} / 优秀 {task.excellentScore}</small>
+        <b>{status}</b>
+      </footer>
+    </article>
   )
 }
 
