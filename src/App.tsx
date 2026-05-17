@@ -274,6 +274,41 @@ function App() {
             <h2>{selectedView === 'subject' ? '物理学科体系' : `${selectedChapter.chapterNo}：${selectedChapter.title}`}</h2>
             <p>{selectedView === 'subject' ? physicsSubjectOverview.tagline : selectedBook.source}</p>
           </div>
+          <nav className="view-switcher" aria-label="当前内容视图">
+            <button
+              type="button"
+              className={selectedView === 'subject' ? 'active' : ''}
+              onClick={() => {
+                setSelectedTemplateId(null)
+                setSelectedKnowledgeId(null)
+                setSelectedView('subject')
+              }}
+            >
+              学科
+            </button>
+            <button type="button" className={selectedView === 'chapter' ? 'active' : ''} onClick={() => selectChapter(selectedChapter)}>
+              章节
+            </button>
+            <button type="button" className={selectedView === 'lesson' || selectedView === 'knowledge' ? 'active' : ''} onClick={() => selectLesson(selectedLesson.title)}>
+              知识点
+            </button>
+            <button type="button" className={selectedView === 'practice' ? 'active' : ''} onClick={() => selectPractice(selectedKnowledge)}>
+              练习
+            </button>
+            <button
+              type="button"
+              className={selectedView === 'model' ? 'active' : ''}
+              onClick={() => {
+                const modelId = selectedKnowledge?.modelIds[0] ?? getLessonModels(selectedLesson)[0]?.id ?? modelTemplates[0]?.id
+                if (modelId) {
+                  setSelectedTemplateId(modelId)
+                  setSelectedView('model')
+                }
+              }}
+            >
+              模型
+            </button>
+          </nav>
         </header>
 
         <div className="content-grid">
